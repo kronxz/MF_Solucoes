@@ -233,11 +233,14 @@ const auth = getAuth(app);
 onAuthStateChanged(auth, async (user) => {
   limparListeners();
 
-  if (!user) {
-    setGlobalLoading(false);
-    window.location.href = 'login.html';
-    return;
-  }
+  // DEBUG TEMPORÁRIO: bypass de redirect/login guard para testes diretos
+  // if (!user) {
+  //   setGlobalLoading(false);
+  //   window.location.href = 'login.html';
+  //   return;
+  // }
+
+  const debugUser = user || { uid: 'debug-user', email: 'debug@mf.local' };
 
   setSyncStatus('syncing');
   setGlobalLoading(true, 'Conectando ao Firebase...');
@@ -247,7 +250,7 @@ onAuthStateChanged(auth, async (user) => {
 
   // Exibir email
   const emailEl = document.getElementById('userEmail');
-  if (emailEl) emailEl.textContent = (user.email || '').split('@')[0];
+  if (emailEl) emailEl.textContent = (debugUser.email || '').split('@')[0];
 
   // Carregar leads do localStorage imediatamente (UX)
   const backup = localStorage.getItem('backup_leads');
@@ -259,12 +262,12 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   // Iniciar notepad
-  iniciarNotepad(db, user.uid);
+  iniciarNotepad(db, debugUser.uid);
 
   // Realtime leads
-  iniciarRealtimeLeads(user.uid);
+  iniciarRealtimeLeads(debugUser.uid);
 
-  iniciarRealtimeEventosCRM(user.uid);
+  iniciarRealtimeEventosCRM(debugUser.uid);
 
   initInstalacoes(db);
   initTecnico(db);
