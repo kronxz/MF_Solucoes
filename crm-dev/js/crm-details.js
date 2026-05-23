@@ -17,7 +17,7 @@ import {
   badgeTemperaturaHtml,
   crmCardIntel,
   toDateFromFirestore
-} from '../../crm/crm-realtime.js';
+} from './crm-realtime.js';
 
 let _db = null;
 let _leads = [];

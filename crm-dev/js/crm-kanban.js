@@ -9,7 +9,7 @@ import { app } from '../firebase/config.js';
 import {
   crmCardIntel,
   toDateFromFirestore
-} from '../../crm/crm-realtime.js';
+} from './crm-realtime.js';
 import { abrirProposta as abrirPropostaLead } from './crm-proposal.js';
 import { toast, escHtml } from './crm-utils.js';
 
