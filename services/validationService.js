@@ -170,6 +170,13 @@ export function verificarFlood(acao, fingerprint) {
         return sucesso(true);
     }
 
+    const host = typeof location !== 'undefined' ? location.hostname : '';
+    const isDevHost = host === 'localhost' || host === '127.0.0.1' || ((host.includes('dev') || host.includes('dev-')) && (host.endsWith('.web.app') || host.endsWith('.firebaseapp.com')));
+    if (isDevHost) {
+        console.log('[VALIDATION] DEV flood bypass enabled for host:', host);
+        return sucesso(true);
+    }
+
     const agora = Date.now();
     // Cooldown REAL para spam: 20s entre fingerprints DIFERENTES
     // Re-chamada do MESMO número (blur + calcular): cooldown mínimo de 1s

@@ -18,21 +18,36 @@ function formatarData(dataISO) {
 
 export function iniciarLixeira(db) {
   _db = db;
-  document.getElementById('btn-lixeira')?.addEventListener('click', abrirLixeira);
-  document.getElementById('btn-fechar-lixeira')?.addEventListener('click', fecharLixeira);
-  document.getElementById('modalLixeira')?.addEventListener('click', e => {
+  const btnAbrir = document.getElementById('btn-lixeira');
+  const btnFechar = document.getElementById('btn-fechar-lixeira');
+  const modal = document.getElementById('modalLixeira');
+  const pesquisa = document.getElementById('pesquisaLixeira');
+  const lista = document.getElementById('listaLixeira');
+
+  if (!btnAbrir) console.warn('[CRM-Trash] botão Lixeira não encontrado');
+  if (!btnFechar) console.warn('[CRM-Trash] botão fechar lixeira não encontrado');
+  if (!modal) console.warn('[CRM-Trash] modal da lixeira não encontrado');
+  if (!pesquisa) console.warn('[CRM-Trash] campo de pesquisa da lixeira não encontrado');
+  if (!lista) console.warn('[CRM-Trash] lista da lixeira não encontrada');
+
+  btnAbrir?.addEventListener('click', abrirLixeira);
+  btnFechar?.addEventListener('click', fecharLixeira);
+  modal?.addEventListener('click', e => {
     if (e.target.id === 'modalLixeira') fecharLixeira();
   });
-  document.getElementById('pesquisaLixeira')?.addEventListener('input', () => {
+  pesquisa?.addEventListener('input', () => {
     if (_debounce) clearTimeout(_debounce);
     _debounce = setTimeout(() => renderLixeira(), 300);
   });
-  document.getElementById('listaLixeira')?.addEventListener('click', e => {
+  lista?.addEventListener('click', e => {
     const btnRestore = e.target.closest('[data-restaurar]');
     const btnDelete = e.target.closest('[data-excluir-perm]');
     if (btnRestore) restaurarLead(btnRestore.dataset.restaurar);
     if (btnDelete) excluirPermanentemente(btnDelete.dataset.excluirPerm);
   });
+
+  window.abrirLixeira = abrirLixeira;
+  window.fecharLixeira = fecharLixeira;
 }
 
 export const iniciarTrash = iniciarLixeira;
@@ -96,11 +111,22 @@ function renderLixeira() {
 }
 
 async function restaurarLead(id) {
+  if (!_db) {
+    console.error('[CRM-Trash] banco não inicializado');
+    toast('Erro interno ao restaurar lead', 'error');
+    return;
+  }
+
   try {
     await updateDoc(doc(_db, 'leads', id), {
       deletado: false,
       restauradoEm: new Date().toISOString()
     });
+    const lead = _leads.find(l => l.id === id);
+    if (lead) {
+      lead.deletado = false;
+      lead.restauradoEm = new Date().toISOString();
+    }
     renderLixeira();
     toast('Lead restaurado', 'success');
   } catch (e) {
@@ -111,8 +137,15 @@ async function restaurarLead(id) {
 
 async function excluirPermanentemente(id) {
   if (!confirm('Excluir permanentemente? Esta ação não pode ser desfeita.')) return;
+  if (!_db) {
+    console.error('[CRM-Trash] banco não inicializado');
+    toast('Erro interno ao excluir lead', 'error');
+    return;
+  }
+
   try {
     await deleteDoc(doc(_db, 'leads', id));
+    _leads = _leads.filter(l => l.id !== id);
     renderLixeira();
     toast('Lead excluído permanentemente', 'warn');
   } catch (e) {

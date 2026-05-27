@@ -11,6 +11,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /returno_ao_site/{docId} {
+      allow read: if true;
+      allow create, update: if request.auth != null;
+    }
+
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

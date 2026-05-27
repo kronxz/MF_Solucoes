@@ -10,7 +10,13 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "**/*.bat",
+      "**/*.cmd",
+      "**/*.ps1",
+      "**/.git/**",
+      "**/*.log",
+      "**/*.bak"
     ],
     "rewrites": [
       {
