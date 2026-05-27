@@ -11,7 +11,17 @@ import {
   toDateFromFirestore
 } from './crm-realtime.js';
 import { abrirProposta as abrirPropostaLead } from './crm-proposal.js';
-import { toast, escHtml } from './crm-utils.js';
+import { toast } from './crm-utils.js';
+
+// ─── ESCAPE HTML (local implementation) ────────────────────────
+function escHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const COLUNAS = ['novo', 'contato', 'proposta', 'negociacao', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
 const TITULOS = {
