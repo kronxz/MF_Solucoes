@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebase
 import { getFirestore, collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 /* PROD - original (commented) */
 const firebaseConfigProd = {
@@ -35,6 +36,7 @@ if (!getApps().length) {
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 let analytics = null;
 
 try {
@@ -43,4 +45,14 @@ try {
   console.warn("Analytics not initialized", e);
 }
 
-export { app, db, storage, analytics, collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where, limit };
+// ─── WAIT FOR AUTH ────────────────────────────────────────────
+function waitForAuth() {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
+
+export { app, db, storage, auth, analytics, waitForAuth, collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where, limit };
