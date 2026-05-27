@@ -1,9 +1,11 @@
 // [MF-AI-CHANGE] app.js — Orquestrador CRM Dev — 2026-05-22
 // Integra auth, realtime leads/eventos, e conecta todos os módulos
 
-import { app, db } from '../firebase/config.js';
+import { app, db, auth, waitForAuth } from '../firebase/config.js';
+console.log('[ACTIVE_APP_FILE]', import.meta.url);
+
 import {
-  getAuth, onAuthStateChanged, signOut
+  onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
   collection, query, where, orderBy, limit, onSnapshot
@@ -66,7 +68,7 @@ function mostrarPagina(pageId) {
   if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm);
   if (pageId === 'visitasPage') renderizarVisitas(eventos);
   if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
-  if (pageId === 'kanbanPage') renderizarKanban(leads);
+  if (pageId === 'leadsPage') renderizarKanban(leads);
   if (pageId === 'instalacoesPage') {
     atualizarOpcoesInstalacao();
     renderizarListaInstalacoes('instalacoesLista');
@@ -90,7 +92,6 @@ function iniciarNavegacao() {
 
   // Logout
   document.getElementById('btn-logout')?.addEventListener('click', () => {
-    const auth = getAuth(app);
     signOut(auth).then(() => {
       // window.location.href = 'login.html'; // REMOVIDO TEMPORARIAMENTE
     });
@@ -107,7 +108,7 @@ function iniciarNavegacao() {
 function atualizarTudo() {
   showKanbanSkeleton(false);
   const paginaAtiva = document.querySelector('.page.active')?.id;
-  if (paginaAtiva === 'kanbanPage') renderizarKanban(leads);
+  if (paginaAtiva === 'leadsPage') renderizarKanban(leads);
   if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
@@ -176,8 +177,11 @@ function iniciarRealtimeLeads(userId) {
       // Process incremental changes
       snapshot.docChanges().forEach(change => {
         const id = change.doc.id;
-        const data = { id, ...change.doc.data() };
+        const data = { id, ...change.doc.data({ serverTimestamps: 'estimate' }) };
+
         if (change.type === 'added' || change.type === 'modified') {
+          // [ACTIVE_APP_FILE] app.js — todos os leads passam para o kanban sem filtro aqui
+          console.log('[APP_SNAPSHOT] lead recebido:', id, '| nome:', data.nome, '| createdAt:', !!data.createdAt, '| deletado:', data.deletado);
           _leadsMap.set(id, data);
         } else if (change.type === 'removed') {
           _leadsMap.delete(id);
@@ -185,7 +189,11 @@ function iniciarRealtimeLeads(userId) {
       });
 
       leads = Array.from(_leadsMap.values());
-      console.log(`[CRM] Leads sincronizados (map): ${leads.length}`);
+      console.log(`[REALTIME] snapshot recebido: ${leads.length} leads`);
+      console.log("[LEAD_FLOW] snapshot recebido:", leads.length);
+      leads.forEach(lead => {
+        console.log('[DEBUG] lead pós-snapshot:', lead.id, lead.status);
+      });
 
       if (_primeiraSync) {
         _primeiraSync = false;
@@ -226,25 +234,24 @@ function iniciarRealtimeEventosCRM(userId) {
   );
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────
-const auth = getAuth(app);
+// ─── AUTH & RUNTIME GATE ──────────────────────────────────────
+let isAppInitialized = false;
 
 onAuthStateChanged(auth, async (user) => {
+  console.log('[AUTH] onAuthStateChanged disparado. Usuário:', user ? user.email : 'nenhum');
   limparListeners();
-  console.log('[CRM] Auth state:', user?.uid || null);
 
   if (!user) {
+    console.log('[AUTH] Sessão encerrada. Redirecionando para login.');
     setGlobalLoading(false);
-
-    if (window.location.pathname.includes('login')) {
-      window.location.href = '/';
-      return;
+    
+    if (!window.location.pathname.includes('login.html')) {
+      window.location.href = 'login.html';
     }
-
-    mostrarPagina('dashboardPage');
     return;
   }
 
+  console.log('[AUTH] Sessão de usuário hidratada com sucesso:', user.email);
   setSyncStatus('syncing');
   setGlobalLoading(true, 'Conectando ao Firebase...');
   showKanbanSkeleton(true);
@@ -264,12 +271,10 @@ onAuthStateChanged(auth, async (user) => {
     } catch (_) { /* ignora backup corrompido */ }
   }
 
-  // Iniciar notepad
+  // Iniciar notepad e listeners
+  console.log('[FIRESTORE] Registrando listeners em tempo real para leads e eventos...');
   iniciarNotepad(db, user.uid);
-
-  // Realtime leads
   iniciarRealtimeLeads(user.uid);
-
   iniciarRealtimeEventosCRM(user.uid);
 
   initInstalacoes(db);
@@ -286,21 +291,46 @@ onAuthStateChanged(auth, async (user) => {
   carregarLeadsMap(() => atualizarOpcoesInstalacao());
 });
 
-// ─── INICIALIZAR MÓDULOS ──────────────────────────────────────
-iniciarSidebarMobile();
-bindEscapeModals();
-iniciarMonitorConexao();
-iniciarNavegacao();
-iniciarLixeira(db);
-iniciarDetails(db);
-iniciarAnalytics();
-iniciarInstalacoesPage();
+// ─── BOOTSTRAP GATED BY AUTH ──────────────────────────────────
+async function bootstrapApp() {
+  console.log('[AUTH] Iniciando Runtime Gate do app.js...');
+  const user = await waitForAuth();
+  
+  if (!user) {
+    console.log('[AUTH] Runtime Gate: Usuário não autenticado no carregamento inicial.');
+    setGlobalLoading(false);
+    if (!window.location.pathname.includes('login.html')) {
+      window.location.href = 'login.html';
+    }
+    return;
+  }
 
-// Kanban: callback para abrir detalhes
-iniciarKanban(db, (leadId) => abrirDetalhes(leadId));
+  console.log('[AUTH] Runtime Gate liberado. Inicializando módulos...');
 
-// Página inicial
-mostrarPagina('dashboardPage');
+  // Inicializar módulos de forma segura
+  iniciarSidebarMobile();
+  bindEscapeModals();
+  iniciarMonitorConexao();
+  iniciarNavegacao();
+  iniciarLixeira(db);
+  iniciarDetails(db);
+  iniciarAnalytics();
+  iniciarInstalacoesPage();
+
+  // Kanban: callback para abrir detalhes
+  iniciarKanban(db, (leadId) => abrirDetalhes(leadId));
+
+  // Página inicial padrão
+  mostrarPagina('dashboardPage');
+  
+  isAppInitialized = true;
+  console.log('[AUTH] CRM totalmente inicializado e pronto.');
+}
+
+// Executar bootstrap do app
+bootstrapApp().catch(err => {
+  console.error('[AUTH] Erro crítico no bootstrap do CRM:', err);
+});
 
 
 function atualizarOpcoesInstalacao() {
@@ -348,4 +378,4 @@ function iniciarInstalacoesPage() {
   });
 }
 
-console.log('[CRM] App inicializado — MF Soluções Dev');
+// console.log('[CRM] App inicializado — MF Soluções Dev');

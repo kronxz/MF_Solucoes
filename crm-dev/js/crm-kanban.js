@@ -1,28 +1,37 @@
 // [MF-AI-CHANGE] crm-kanban.js — Kanban board, cards, drag-drop, progression — 2026-05-22
+const CRM_KANBAN_VERSION = 'v1.0.3';
+console.log('[CRM] crm-kanban version', CRM_KANBAN_VERSION);
 // Handles: board render, card HTML, drag-and-drop, mover/voltar, excluir, whatsapp, proposta, fechar
 
 import {
-  doc, updateDoc, addDoc, collection, deleteDoc
+  doc, updateDoc, addDoc, collection, serverTimestamp, getDocs
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { app } from '../firebase/config.js';
+import { app, auth, waitForAuth } from '../firebase/config.js';
 import {
   crmCardIntel,
   toDateFromFirestore
 } from './crm-realtime.js';
 import { abrirProposta as abrirPropostaLead } from './crm-proposal.js';
-import { toast, escHtml } from './crm-utils.js';
+// KANBAN FILE REAL logging added below
+console.log('KANBAN FILE REAL:', import.meta.url);
+// deduplicação removida – bloco de descarte de lead desativado
+/*
+if (!COLUNAS.includes(col)) {
+  console.log('[DEBUG] lead descartado: status não reconhecido', lead.status, lead.nome);
+  return; // skip this lead
+}
+*/
 
-const COLUNAS = ['novo', 'contato', 'proposta', 'negociacao', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
-const TITULOS = {
-  novo: '🟡 Novos',
-  contato: '🔵 Contato',
-  proposta: '🟠 Proposta',
+// Pipeline CRM Novo — constante única de estágios válidos
+const STATUS_VALIDOS = ['novo', 'contato', 'proposta', 'negociacao', 'fechado'];
+const PIPELINE = STATUS_VALIDOS;
+const COLUNAS  = PIPELINE; // alias semântico usado no restante do arquivo
+const TITULOS  = {
+  novo:       '🟡 Novos',
+  contato:    '🔵 Contato',
+  proposta:   '🟠 Proposta',
   negociacao: '🟣 Negociação',
-  fechado: '🟢 Fechado',
-  instalacao: '🔧 Instalação',
-  'pos-venda': '💼 Pós-Venda',
-  manutencao: '🛠️ Manutenção'
+  fechado:    '🟢 Fechado'
 };
 
 // ─── ESTADO INTERNO ───────────────────────────────────────────
@@ -32,29 +41,58 @@ let _onDetalhes = null;
 let _dragId = null;
 let _filtro = { busca: '', status: '', ordenar: 'recente' };
 
-// ─── UTILITÁRIOS ──────────────────────────────────────────────
+// ─── NORMALIZAÇÃO DE STATUS ────────────────────────────────────
+/**
+ * Função única de normalização de status.
+ * Usa NFD para ignorar acentos. Cobre todos os aliases legados e variantes.
+ * Qualquer valor desconhecido retorna 'novo'.
+ */
 export function normalizarStatus(status) {
-  const chave = String(status || 'novo').toLowerCase().trim();
+  if (!status) return 'novo';
+
+  const s = String(status)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''); // remove acentos
+
+  // Mapa completo: canônicos + todos os aliases solicitados
   const mapa = {
-    novo: 'novo',
-    contato: 'contato',
-    proposta: 'proposta',
-    negociacao: 'negociacao',
-    'negociação': 'negociacao',
-    fechado: 'fechado',
-    instalacao: 'instalacao',
-    'pós-venda': 'pos-venda',
-    'pos-venda': 'pos-venda',
-    manutencao: 'manutencao',
-    'manutenção': 'manutencao'
+    // → novo
+    'novo':       'novo',
+    'novos':      'novo',
+    'lead':       'novo',
+    'lead novo':  'novo',
+    'new':        'novo',
+    // → contato
+    'contato':    'contato',
+    'em contato': 'contato',
+    'contact':    'contato',
+    // → proposta
+    'proposta':   'proposta',
+    'orcamento':  'proposta',
+    'quote':      'proposta',
+    // → negociacao
+    'negociacao': 'negociacao',
+    'negocio':    'negociacao',
+    'deal':       'negociacao',
+    // → fechado (inclui todos os legados)
+    'fechado':    'fechado',
+    'instalacao': 'fechado',
+    'pos-venda':  'fechado',
+    'posvenda':   'fechado',
+    'manutencao': 'fechado',
+    'won':        'fechado',
+    'closed':     'fechado'
   };
-  return mapa[chave] || 'novo';
+
+  const res = mapa[s] || 'novo';
+  return STATUS_VALIDOS.includes(res) ? res : 'novo';
 }
 
 function alertaCard(statusColuna, dias) {
-  if (statusColuna === 'proposta' && dias >= 1) return { texto: '🔥 FECHAR HOJE', cor: '#ef4444' };
-  if (statusColuna === 'instalacao' && dias >= 7) return { texto: '⚠️ ATRASO', cor: '#f59e0b' };
-  if (statusColuna === 'pos-venda' && dias >= 3) return { texto: '⏰ FOLLOW-UP', cor: '#8b5cf6' };
+  if (statusColuna === 'proposta'    && dias >= 1) return { texto: '🔥 FECHAR HOJE', cor: '#ef4444' };
+  if (statusColuna === 'negociacao'  && dias >= 3) return { texto: '⏰ FOLLOW-UP',   cor: '#8b5cf6' };
   if (dias >= 5) return { texto: '⚠️ PARADO', cor: '#f59e0b' };
   return { texto: '🟢 ANDAMENTO', cor: '#22c55e' };
 }
@@ -63,16 +101,16 @@ function alertaCard(statusColuna, dias) {
 function criarCardHtml(lead) {
   const refData = toDateFromFirestore(lead.lastAction || lead.createdAt || lead.data);
   const dias = refData ? Math.floor((Date.now() - refData.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-  const status = normalizarStatus(lead.status);
-  const alerta = alertaCard(status, dias);
+  const statusNorm = normalizarStatus(lead.status);
+  const alerta = alertaCard(statusNorm, dias);
   const valor = lead.valor ?? lead.contaDeLuz ?? '-';
-  const origem = lead.utm_source || 'direto';
+  const origem = lead.utm_source || lead.origem || 'direto';
   const campanha = lead.utm_campaign || '-';
   const meio = lead.utm_medium || '-';
   const kit = lead.kitEscolhido || lead.sistema || '-';
 
   return `
-<div class="card" draggable="true" data-lead-id="${lead.id}">
+<div class="card lead-card" draggable="true" data-lead-id="${lead.id}">
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>
@@ -102,7 +140,21 @@ function tsLead(l) {
 }
 
 function filtrarLeadsKanban(leads) {
-  let lista = (leads || []).filter(l => !l.deletado);
+  const leadsArray = Array.isArray(leads) ? leads : Object.values(leads || {});
+  console.log('[ACTIVE_KANBAN_FILE] crm-kanban.js — filtrarLeadsKanban iniciado, total leads:', leadsArray.length);
+  let lista = leadsArray.filter(l => {
+    if (!l || typeof l !== 'object') return false;
+    if (l.deletado === true || l.isDeleted === true || l.status === 'lixeira') {
+      console.log('[KANBAN_FILTER] lead excluído (deletado/lixeira):', l?.id, l?.nome);
+      return false;
+    }
+    if (!l.status) {
+      l.status = 'novo';
+    }
+    console.log(`[KANBAN_FILTER] lead aceito: ${l.id} | nome: ${l.nome || '(sem nome)'} | status: ${l.status} | createdAt: ${!!l.createdAt}`);
+    return true;
+  });
+
   const busca = _filtro.busca.trim().toLowerCase();
   if (busca) {
     lista = lista.filter(l =>
@@ -113,38 +165,77 @@ function filtrarLeadsKanban(leads) {
   if (_filtro.status) {
     lista = lista.filter(l => normalizarStatus(l.status) === _filtro.status);
   }
+
   lista.sort((a, b) => {
-    switch (_filtro.ordenar) {
-      case 'antigo': return tsLead(a) - tsLead(b);
-      case 'valor': return (parseFloat(b.valor) || 0) - (parseFloat(a.valor) || 0);
-      case 'score': return (Number(b.score) || 0) - (Number(a.score) || 0);
-      case 'nome': return (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
-      default: return tsLead(b) - tsLead(a);
-    }
+    const ta = a.createdAt?.seconds || 0;
+    const tb = b.createdAt?.seconds || 0;
+    return tb - ta;
   });
+
   return lista;
 }
 
 // ─── RENDERIZAR BOARD ─────────────────────────────────────────
 export function renderizarKanban(leads) {
+  console.log("[LEAD_FLOW] render kanban");
+  if (!auth.currentUser) {
+    console.warn('[KANBAN] Tentativa de renderizar Kanban sem usuário autenticado. Ignorando.');
+    return;
+  }
+  window.__KANBAN_RENDER_COUNT = (window.__KANBAN_RENDER_COUNT || 0) + 1;
+  console.log('[KANBAN] Render count:', window.__KANBAN_RENDER_COUNT);
+
   _leads = leads;
   const ativos = filtrarLeadsKanban(leads);
+  console.log('[KANBAN] renderizando:', ativos.length, 'de', leads.length, 'leads');
+
+  // Montar HTML de cada coluna (apenas as 5 do CRM novo)
   const colunaHtml = {};
   COLUNAS.forEach(col => { colunaHtml[col] = `<h2>${TITULOS[col]}</h2>`; });
 
   ativos.forEach(lead => {
-    const col = normalizarStatus(lead.status);
+    const col = normalizarStatus(lead.status); // sempre retorna um dos 5 válidos
+    console.log(`[KANBAN_RENDER] lead.id: ${lead.id} | status: ${lead.status} | normalized: ${col}`);
+// if (!COLUNAS.includes(col)) { // deduplication removed
+//   console.log('[DEBUG] lead descartado: status não reconhecido', lead.status, lead.nome);
+//   return; // skip this lead
+// }
     colunaHtml[col] += criarCardHtml(lead);
   });
 
+  // Atualizar DOM — cada coluna recebe innerHTML UMA única vez
   COLUNAS.forEach(col => {
     const el = document.getElementById(col);
-    if (!el) return;
+    if (!el) {
+      console.error(`[KANBAN_RENDER] ERROR: element for column '${col}' not found in DOM.`);
+      return;
+    }
     if (!colunaHtml[col].includes('class="card"')) {
       colunaHtml[col] += '<p class="crm-col-empty">Nenhum lead nesta coluna</p>';
     }
-    el.innerHTML = colunaHtml[col];
+    console.log('[DEBUG] limpando coluna:', col);
+    el.innerHTML = colunaHtml[col]; // limpeza + inserção atômica
+    console.log('[DEBUG] coluna atualizada:', col);
   });
+
+  console.log('[DEBUG] cards DOM:', document.querySelectorAll('.lead-card').length);
+
+  // FASE 1 — NEGOCIAÇÃO: Investigação obrigatória de estilos computados
+  const colNeg = document.getElementById('negociacao');
+  if (colNeg) {
+    const style = window.getComputedStyle(colNeg);
+    console.log(`[KANBAN_NEGOCIACAO] Column Element:`, colNeg);
+    console.log(`[KANBAN_NEGOCIACAO] Parent:`, colNeg.parentElement?.id || colNeg.parentElement);
+    console.log(`[KANBAN_NEGOCIACAO] display: ${style.display} | opacity: ${style.opacity} | transform: ${style.transform} | z-index: ${style.zIndex} | pointer-events: ${style.pointerEvents} | overflow: ${style.overflow}`);
+    const cards = colNeg.querySelectorAll('.lead-card');
+    console.log(`[KANBAN_NEGOCIACAO] Total cards in Negociação column DOM: ${cards.length}`);
+    cards.forEach(card => {
+      const cs = window.getComputedStyle(card);
+      console.log(`[KANBAN_NEGOCIACAO] Card ID: ${card.dataset.leadId} | Display: ${cs.display} | Opacity: ${cs.opacity} | Transform: ${cs.transform} | zIndex: ${cs.zIndex} | Pointer-Events: ${cs.pointerEvents}`);
+    });
+  } else {
+    console.log(`[KANBAN_NEGOCIACAO] ERROR: Column element 'negociacao' not found in DOM!`);
+  }
 
   if (window.matchMedia('(max-width: 768px)').matches) mostrarColunaMobile('novo');
 }
@@ -161,12 +252,21 @@ export function iniciarKanban(db, onDetalhes) {
   board.addEventListener('click', e => {
     const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
     if (!btn) return;
+    console.log('[KANBAN_CLICK] dataset', btn.dataset);
+    console.log('[KANBAN_CLICK] proposta', btn.dataset.proposta);
+    console.log('[KANBAN_CLICK] leadId', btn.dataset.leadId);
 
     if (btn.dataset.mover) moverLead(btn.dataset.mover);
     else if (btn.dataset.voltar) voltarLead(btn.dataset.voltar);
     else if (btn.dataset.excluir) excluirLead(btn.dataset.excluir);
     else if (btn.dataset.detalhes && _onDetalhes) _onDetalhes(btn.dataset.detalhes);
-    else if (btn.dataset.proposta) abrirProposta(btn.dataset.proposta);
+    else if (btn.dataset.proposta) {
+      const leadId = btn.dataset.proposta || btn.dataset.leadId;
+      console.log('[KANBAN_CLICK] resolved', leadId);
+      const lead = _leads.find(l => l.id === leadId);
+      console.log('[KANBAN_CLICK] lead', lead);
+      if (lead) abrirProposta(lead.id); else console.warn('[KANBAN_CLICK] Lead not found for id', leadId);
+    }
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);
     else if (btn.dataset.whatsapp) whatsappLead(btn.dataset.whatsapp);
   });
@@ -249,40 +349,88 @@ export function iniciarKanban(db, onDetalhes) {
 
 // ─── AÇÕES DOS LEADS ──────────────────────────────────────────
 async function moverParaColuna(id, novoStatus) {
-  const ref = doc(_db, 'leads', id);
+  if (!id) {
+    console.warn('[KANBAN] moverParaColuna: id do lead não informado');
+    return;
+  }
   const lead = _leads.find(l => l.id === id);
-  if (!lead) return;
+  if (!lead) {
+    console.warn('[KANBAN] moverParaColuna: lead não encontrado', id);
+    return;
+  }
+  const statusAntes = lead.status;
+  const statusAtual = normalizarStatus(lead.status);
+  if (!STATUS_VALIDOS.includes(statusAtual)) {
+    console.warn('[KANBAN] moverParaColuna: status atual corrompido ou inválido', statusAtual);
+    return;
+  }
+  if (!STATUS_VALIDOS.includes(novoStatus)) {
+    console.warn('[KANBAN] moverParaColuna: próximo status inválido', novoStatus);
+    return;
+  }
+
+  console.log(`[KANBAN_MOVE] lead.id: ${id} | status antes: ${statusAntes} | status depois: ${novoStatus} | coluna destino: ${novoStatus}`);
+  console.log(`[KANBAN_STATUS] lead.id: ${id} | normalizedStatus: ${statusAtual} -> ${novoStatus}`);
+
+  const ref = doc(_db, 'leads', id);
   const historico = lead.historico || [];
   historico.push({ acao: 'Movido para ' + novoStatus, data: new Date().toISOString() });
-  await updateDoc(ref, {
+  
+  const payload = {
     status: novoStatus,
     historico,
     ultima_acao_nome: 'Movido para ' + novoStatus,
     lastAction: new Date().toISOString()
-  });
+  };
+
+  if (novoStatus === 'fechado') {
+    payload.fechadoEm = serverTimestamp();
+  }
+
+  await updateDoc(ref, payload);
+  console.log('[DEBUG] status salvo firestore:', id, novoStatus);
   toast(`Lead → ${novoStatus}`, 'success');
+  
+  // Atualiza estado local e força re-render
+  lead.status = novoStatus;
+  renderizarKanban(_leads);
 }
 
 async function moverLead(id) {
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
   const atual = normalizarStatus(lead.status);
-  const i = COLUNAS.indexOf(atual);
-  if (i < COLUNAS.length - 1) await moverParaColuna(id, COLUNAS[i + 1]);
+  const i = PIPELINE.indexOf(atual);
+  // Nunca vai além do último estágio; nunca produz status inválido
+  if (i === -1 || i >= PIPELINE.length - 1) return;
+  const proximo = PIPELINE[i + 1];
+  console.log('[KANBAN] mover:', lead.nome, atual, '→', proximo);
+  await moverParaColuna(id, proximo);
 }
 
 async function voltarLead(id) {
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
   const atual = normalizarStatus(lead.status);
-  const i = COLUNAS.indexOf(atual);
-  if (i > 0) await moverParaColuna(id, COLUNAS[i - 1]);
+  const i = PIPELINE.indexOf(atual);
+  // Nunca vai abaixo do primeiro estágio; nunca some
+  if (i <= 0) return;
+  const anterior = PIPELINE[i - 1];
+  console.log('[KANBAN] voltar:', lead.nome, atual, '→', anterior);
+  await moverParaColuna(id, anterior);
 }
 
 async function excluirLead(id) {
   if (!confirm('Mover lead para a lixeira?')) return;
+  const lead = _leads.find(l => l.id === id);
+  const statusAnterior = lead ? normalizarStatus(lead.status) : 'novo';
   const ref = doc(_db, 'leads', id);
-  await updateDoc(ref, { deletado: true, deletadoEm: new Date().toISOString() });
+  await updateDoc(ref, { 
+    deletado: true, 
+    status: 'lixeira',
+    statusAnterior: statusAnterior,
+    deletadoEm: serverTimestamp() 
+  });
   toast('Lead movido para lixeira', 'warn');
 }
 
@@ -298,7 +446,10 @@ async function fecharVenda(id) {
   if (sistema.includes('Premium')) est.premiumFechados = (est.premiumFechados || 0) + 1;
   localStorage.setItem('estatisticas', JSON.stringify(est));
 
-  await updateDoc(doc(_db, 'leads', id), { status: 'fechado' });
+  await updateDoc(doc(_db, 'leads', id), { 
+    status: 'fechado',
+    fechadoEm: serverTimestamp()
+  });
   toast('🚀 Venda fechada!', 'success');
 }
 
@@ -317,43 +468,57 @@ function abrirProposta(id) {
 
 async function novoLead() {
   const nome = prompt('Nome do cliente:');
-  if (!nome) return;
-  const telefone = prompt('Telefone:');
-  const valor = prompt('Conta de luz (R$):');
-  const investimento = prompt('Valor do sistema (R$):');
-  const kwp = prompt('Potência do sistema (kWp):');
+  if (nome === null) return;
+  if (nome.trim().length < 3) {
+    toast('Nome deve ter no mínimo 3 caracteres', 'error');
+    return;
+  }
 
-  const utm = JSON.parse(localStorage.getItem('utm') || '{}');
-  const kit = JSON.parse(localStorage.getItem('kitSelecionado') || '{}');
+  const telefone = prompt('Telefone:') || '';
+  if (telefone === null) return;
+  const telDigitos = String(telefone).replace(/\D/g, '');
+  if (telDigitos.length < 10) {
+    toast('Telefone deve ter no mínimo 10 dígitos', 'error');
+    return;
+  }
 
-  const uid = getAuth(app).currentUser?.uid || null;
+  const email    = prompt('E-mail (opcional):') || '';
+  if (email === null) return;
+  const valor    = prompt('Conta de luz (R$):') || '';
+  if (valor === null) return;
+
+  const user = await waitForAuth();
+  const uid = user?.uid || null;
   if (!uid) {
+    console.warn('[LEADS] Tentativa de salvar lead manual falhou: usuário não autenticado.');
     toast('Usuário não autenticado', 'error');
     return;
   }
 
-  const tel = String(telefone || '').replace(/\D/g, '');
+  const agora = serverTimestamp();
 
-  await addDoc(collection(_db, 'leads'), {
-    nome, telefone, telefoneDigitos: tel, valor,
-    sistema: kit?.sistema || '-',
-    investimento: kit?.investimento || investimento || 0,
-    geracao: kit?.geracao || 0,
-    geracaoMensal: kit?.geracao || 0,
-    kwp: kit?.kwp || kwp || 0,
-    payback: kit?.payback || '-',
-    inversor: kit?.inversor || '-',
-    overload: kit?.overload || '-',
-    potenciaPlaca: kit?.potenciaPlaca || '-',
-    placas: kit?.placas || 0,
-    status: 'novo',
-    userId: uid,
-    data: new Date().toISOString(),
-    criadoEm: new Date().toISOString(),
-    utm_source: utm.source,
-    utm_campaign: utm.campaign,
-    utm_medium: utm.medium
-  });
+  const payload = {
+    nome:             nome.trim(),
+    telefone:         telefone.trim(),
+    telefoneDigitos:  telDigitos,
+    email:            email.trim(),
+    valor,
+    origem:           'manual',
+    status:           'novo',
+    userId:           uid,
+    createdAt:        agora,   // campo canonical — nunca usar 'data'
+    updatedAt:        agora,
+    lastAction:       agora
+  };
+
+  try {
+    const ref = await addDoc(collection(_db, 'leads'), payload);
+    console.log('[LEADS] Novo lead salvo com sucesso no Firestore:', ref.id, '| nome:', nome.trim());
+    toast('Lead criado com sucesso!', 'success');
+  } catch (err) {
+    console.error('[LEADS] Erro ao salvar novo lead manual no Firestore:', err);
+    toast('Erro ao criar lead', 'error');
+  }
 }
 
 // ─── MOBILE KANBAN TABS ───────────────────────────────────────
