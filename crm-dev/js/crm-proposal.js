@@ -61,7 +61,7 @@ export function abrirProposta(lead) {
   }
 
   localStorage.setItem('propostaAbertaEm', new Date().toISOString());
-  // open proposal page from root
-  window.open('../proposta.html', '_blank');
+  // open proposal page from CRM public root
+  window.open('proposta/proposal.html', '_blank');
   return true;
 }
