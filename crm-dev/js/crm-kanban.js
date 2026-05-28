@@ -117,7 +117,11 @@ function tsLead(l) {
 }
 
 function filtrarLeadsKanban(leads) {
-  let lista = (leads || []).filter(l => !l.deletado);
+  let lista = (leads || []).filter(l =>
+    l.deletado === false ||
+    l.deletado == null ||
+    String(l.deletado).toLowerCase() === 'false'
+  );
   const busca = _filtro.busca.trim().toLowerCase();
   if (busca) {
     lista = lista.filter(l =>
