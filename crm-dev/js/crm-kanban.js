@@ -44,19 +44,24 @@ let _filtro = { busca: '', status: '', ordenar: 'recente' };
 
 // ─── UTILITÁRIOS ──────────────────────────────────────────────
 export function normalizarStatus(status) {
-  const chave = String(status || 'novo').toLowerCase().trim();
+  const chave = String(status || 'novo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
   const mapa = {
     novo: 'novo',
     contato: 'contato',
     proposta: 'proposta',
     negociacao: 'negociacao',
-    'negociação': 'negociacao',
+    'negociacao': 'negociacao',
     fechado: 'fechado',
     instalacao: 'instalacao',
-    'pós-venda': 'pos-venda',
     'pos-venda': 'pos-venda',
+    'pos venda': 'pos-venda',
+    'posvenda': 'pos-venda',
     manutencao: 'manutencao',
-    'manutenção': 'manutencao'
+    manutencao: 'manutencao'
   };
   return mapa[chave] || 'novo';
 }
@@ -143,7 +148,10 @@ export function renderizarKanban(leads) {
   COLUNAS.forEach(col => { colunaHtml[col] = `<h2>${TITULOS[col]}</h2>`; });
 
   ativos.forEach(lead => {
-    const col = normalizarStatus(lead.status);
+    let col = normalizarStatus(lead.status);
+    if (!Object.prototype.hasOwnProperty.call(colunaHtml, col)) {
+      col = 'novo';
+    }
     colunaHtml[col] += criarCardHtml(lead);
   });
 

@@ -83,7 +83,7 @@ function renderLixeira() {
 
   const busca = (document.getElementById('pesquisaLixeira')?.value || '').toLowerCase();
   const excluidos = _leads
-    .filter(l => l.deletado)
+    .filter(l => l.deletado === true || String(l.deletado).toLowerCase() === 'true')
     .filter(l =>
       (l.nome || '').toLowerCase().includes(busca) ||
       (l.telefone || '').includes(busca)
