@@ -149,11 +149,12 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
             })
         );
         console.log('[leadService] Validação OK — atualizar calculadora', leadId);
+        console.log('[STATUS_TRACE_ENTRADA] endereco:', dadosValidados.endereco);
 
         // Recupera kits para salvar no lead
         const kits = Storage.getKits();
 
-        await updateDoc(leadRef, {
+        const payloadUpdate = {
             ...dadosValidados,
             kits: kits,
             kitsDisponiveis: dadosValidados.kitsDisponiveis || null,
@@ -161,9 +162,15 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
             consumo: Number(dadosValidados.consumoMensal || 0),
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Fez Simulação'
-        });
+        };
+
+        console.log('[STATUS_TRACE_PAYLOAD] endereco:', payloadUpdate.endereco);
+        console.log('[STATUS_TRACE_PAYLOAD_COMPLETO]', JSON.stringify(payloadUpdate));
+
+        await updateDoc(leadRef, payloadUpdate);
 
         console.log("Lead atualizado com dados da calculadora.");
+        console.log('[STATUS_TRACE_ENVIADO] updateDoc executado');
         const tipoSimulacao = resolverTipoSimulacao(leadId);
         timeline(leadId, tipoSimulacao, { contaDeLuz: dadosValidados.contaDeLuz });
         score(leadId, tipoSimulacao);
@@ -186,7 +193,7 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
         console.log('[leadService] Validação OK — atualizar WhatsApp', leadId);
 
         const leadRef = doc(db, "leads", leadId);
-        await updateDoc(leadRef, {
+        const payloadWhatsApp = {
             kitEscolhido: kitValidado.kit || kitValidado.nome || "",
             sistemaEscolhido: sistemaEscolhido || kitValidado.sistema || "Microinversor",
             investimento: Number(kitValidado.investimento || 0),
@@ -201,7 +208,14 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Clicou WhatsApp',
             atualizadoEm: new Date().toISOString()
-        });
+        };
+
+        console.log('[STATUS_TRACE_WHATSAPP_ANTES] payload enviado:', JSON.stringify(payloadWhatsApp));
+        console.log('[STATUS_TRACE_WHATSAPP_ANTES] status presente no payload?', 'status' in payloadWhatsApp);
+
+        await updateDoc(leadRef, payloadWhatsApp);
+        
+        console.log('[STATUS_TRACE_WHATSAPP_DEPOIS] updateDoc executado sem status');
         console.log("Lead atualizado para WhatsApp com sucesso com detalhes do Kit.");
         timeline(leadId, TIMELINE_TIPOS.ESCOLHEU_KIT, {
             kit: kitValidado.kit,

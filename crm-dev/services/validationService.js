@@ -273,6 +273,9 @@ export function validarDadosCalculadora(dados = {}) {
 
     const endereco = sanitizarTexto(dados.endereco || '', LIMITES.textoGenerico.max);
 
+    console.log('[VALIDACAO_ENDERECO_ENTRADA] dados.endereco:', dados.endereco);
+    console.log('[VALIDACAO_ENDERECO_SAIDA] endereco sanitizado:', endereco);
+
     return sucesso({
         contaDeLuz: rConta.value,
         tarifa: rTarifa.value,
