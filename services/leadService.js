@@ -198,7 +198,6 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
             potenciaPlaca: Number(kitValidado.potenciaPlaca || 0),
             overload: Number(kitValidado.overload || 0),
             payback: Number(kitValidado.payback || 0),
-            status: 'Negociação',
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Clicou WhatsApp',
             atualizadoEm: new Date().toISOString()

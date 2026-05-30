@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function executarSimulacao() {
     const nome = document.getElementById('clienteNome')?.value || document.getElementById('nome')?.value || "Não informado";
     const telefone = document.getElementById('clienteTelefone')?.value || document.getElementById('telefone')?.value || "";
+    const endereco = document.getElementById('endereco')?.value || "";
     const contaDeLuzRaw = document.getElementById('conta')?.value || document.getElementById('bill')?.value || document.querySelector('input[placeholder*="conta"]')?.value;
     const contaDeLuz = parseFloat((contaDeLuzRaw || "0").replace(',', '.'));
 
@@ -131,6 +132,7 @@ async function executarSimulacao() {
             hsp,
             tarifa: tariff,
             potenciaPlaca,
+            endereco,
             kitsDisponiveis
         });
         console.log("[SIMULADOR] Lead salvo");

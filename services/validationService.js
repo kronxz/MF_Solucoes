@@ -278,6 +278,8 @@ export function validarDadosCalculadora(dados = {}) {
     const rFlood = verificarFlood('atualizar_calculadora', fingerprint);
     if (!rFlood.ok) return rFlood;
 
+    const endereco = sanitizarTexto(dados.endereco || '', LIMITES.textoGenerico.max);
+
     return sucesso({
         contaDeLuz: rConta.value,
         tarifa: rTarifa.value,
@@ -285,6 +287,7 @@ export function validarDadosCalculadora(dados = {}) {
         potenciaPlaca: rPlaca.value,
         consumoMensal: validarNumeroOpcional(dados.consumoMensal, 0, 50_000),
         geracaoMensal: validarNumeroOpcional(dados.geracaoMensal, 0, 50_000),
+        endereco,
         kitsDisponiveis: dados.kitsDisponiveis || null
     });
 }
