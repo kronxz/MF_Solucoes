@@ -56,14 +56,12 @@ export function carregarInstalacoes(onUpdate) {
 }
 
 export function carregarLeadsMap(onUpdate) {
-  const uid = getAuth(app).currentUser?.uid;
-  if (!uid) return;
-
-  const q = query(collection(_db, 'leads'), where('userId', '==', uid));
+  const q = query(collection(_db, 'leads'), where('deletado', '!=', true));
   return onSnapshot(q, (snapshot) => {
     _leadsMap = {};
     snapshot.docs.forEach(doc => {
-      _leadsMap[doc.id] = { id: doc.id, ...doc.data() };
+      const leadData = { id: doc.id, ...doc.data() };
+      _leadsMap[doc.id] = leadData;
     });
     onUpdate(_leadsMap);
   });
