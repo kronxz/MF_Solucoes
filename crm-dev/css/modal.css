@@ -16,7 +16,7 @@
   box-sizing: border-box;
 }
 
-.modal-overlay.ativo { display: flex; }
+.modal-overlay.ativo { display: flex !important; }
 
 .modal-box {
   background: #111827;

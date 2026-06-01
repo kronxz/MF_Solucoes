@@ -1162,30 +1162,6 @@ img {
       color: white !important;
     }
 
-    /* Modal Lixeira */
-    #modalLixeira {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 6, 23, 0.85);
-      z-index: 9999;
-      justify-content: center;
-      align-items: center;
-      backdrop-filter: blur(8px);
-    }
-
-    .lixeira-box {
-      background: #111827;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      width: 90%;
-      max-width: 700px;
-      max-height: 80vh;
-      overflow: auto;
-      padding: 25px;
-      border-radius: 20px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
     /* Stats & Performance Tables */
     .stats-table {
       width: 100%;

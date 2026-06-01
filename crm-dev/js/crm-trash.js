@@ -24,26 +24,13 @@ export function iniciarLixeira(db) {
   const pesquisa = document.getElementById('pesquisaLixeira');
   const lista = document.getElementById('listaLixeira');
 
-  console.log('[CRM-Trash] Inicializando lixeira...');
-  console.log('[CRM-Trash] btnAbrir encontrado?', !!btnAbrir);
-  console.log('[CRM-Trash] btnFechar encontrado?', !!btnFechar);
-  console.log('[CRM-Trash] modal encontrado?', !!modal);
-  console.log('[CRM-Trash] pesquisa encontrada?', !!pesquisa);
-  console.log('[CRM-Trash] lista encontrada?', !!lista);
-
   if (!btnAbrir) console.warn('[CRM-Trash] botão Lixeira não encontrado');
   if (!btnFechar) console.warn('[CRM-Trash] botão fechar lixeira não encontrado');
   if (!modal) console.warn('[CRM-Trash] modal da lixeira não encontrado');
   if (!pesquisa) console.warn('[CRM-Trash] campo de pesquisa da lixeira não encontrado');
   if (!lista) console.warn('[CRM-Trash] lista da lixeira não encontrada');
 
-  if (btnAbrir) {
-    console.log('[CRM-Trash] Adicionando event listener ao botão Lixeira');
-    btnAbrir.addEventListener('click', () => {
-      console.log('[CRM-Trash] Botão Lixeira clicado!');
-      abrirLixeira();
-    });
-  }
+  btnAbrir?.addEventListener('click', abrirLixeira);
   btnFechar?.addEventListener('click', fecharLixeira);
   modal?.addEventListener('click', e => {
     if (e.target.id === 'modalLixeira') fecharLixeira();
@@ -74,21 +61,13 @@ export function atualizarLeadsLixeira(leads) {
 export const atualizarLeadsTrash = atualizarLeadsLixeira;
 
 export function abrirLixeira() {
-  console.log('[CRM-Trash] abrirLixeira() chamado!');
   const modal = document.getElementById('modalLixeira');
-  console.log('[CRM-Trash] modal encontrado?', !!modal);
-  if (!modal) {
-    console.error('[CRM-Trash] ERRO: modal não encontrado! Não posso abrir a lixeira.');
-    return;
-  }
-  console.log('[CRM-Trash] Adicionando classe "ativo" ao modal');
+  if (!modal) return;
   modal.classList.add('ativo');
   modal.setAttribute('aria-hidden', 'false');
   const inp = document.getElementById('pesquisaLixeira');
   if (inp) inp.value = '';
-  console.log('[CRM-Trash] Chamando renderLixeira()');
   renderLixeira();
-  console.log('[CRM-Trash] Lixeira aberta com sucesso!');
 }
 
 export function fecharLixeira() {
