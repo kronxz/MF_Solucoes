@@ -198,10 +198,6 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
         console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] sessionId:', snapCalculadora.data()?.sessionId);
         console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] nome:', snapCalculadora.data()?.nome);
         console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] COMPLETO]', JSON.stringify(snapCalculadora.data(), null, 2));
-
-        await updateDoc(leadRef, payloadUpdate);
-
-        console.log("Lead atualizado com dados da calculadora.");
         console.log('[STATUS_TRACE_ENVIADO] updateDoc executado');
         const tipoSimulacao = resolverTipoSimulacao(leadId);
         timeline(leadId, tipoSimulacao, { contaDeLuz: dadosValidados.contaDeLuz });
