@@ -93,9 +93,6 @@ export function validarNome(nome) {
         if (bruto.length < LIMITES.nome.min) {
             return falha('NOME_CURTO', `Nome deve ter pelo menos ${LIMITES.nome.min} caracteres.`);
         }
-        if (!/^[\p{L}\p{M}'\s.-]+$/u.test(bruto)) {
-            return falha('NOME_CARACTERES', 'Nome contém caracteres não permitidos.');
-        }
         for (const re of PADROES_SPAM_TEXTO) {
             if (re.test(bruto)) return falha('NOME_SPAM', 'Nome inválido.');
         }
