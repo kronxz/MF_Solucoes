@@ -1,4 +1,4 @@
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where, limit } from '../firebase/config.js';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query, where, limit, getDoc } from '../firebase/config.js';
 import { Storage } from '../js/storage.js';
 import { getUTM } from '../js/utm.js';
 import {
@@ -117,6 +117,19 @@ export async function criarLeadBase(nome, telefone) {
 
         const docRef = await addDoc(collection(db, "leads"), leadData);
         console.log('[leadService] Lead base criado (novo):', docRef.id);
+        
+        console.log('[CRIAR_LEAD_BASE] leadId:', docRef.id);
+        console.log('[CRIAR_LEAD_BASE] sessionId:', utm.sessionId);
+        console.log('[CRIAR_LEAD_BASE] telefone:', dadosValidados.telefone);
+        console.log('[CRIAR_LEAD_BASE] status inicial:', leadData.status);
+        
+        // Ler imediatamente do Firestore
+        const snapCriar = await getDoc(docRef);
+        console.log('[CRIAR_LEAD_BASE_FIRESTORE] id:', snapCriar.id);
+        console.log('[CRIAR_LEAD_BASE_FIRESTORE] status:', snapCriar.data()?.status);
+        console.log('[CRIAR_LEAD_BASE_FIRESTORE] endereco:', snapCriar.data()?.endereco);
+        console.log('[CRIAR_LEAD_BASE_FIRESTORE] sessionId:', snapCriar.data()?.sessionId);
+        console.log('[CRIAR_LEAD_BASE_FIRESTORE] nome:', snapCriar.data()?.nome);
 
         Storage.setLeadId(docRef.id);
         Storage.setTelefoneDigitos(telefoneDigitos);
@@ -138,6 +151,10 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
         return;
     }
 
+    console.log('[ATUALIZAR_CALCULADORA] leadId:', leadId);
+    console.log('[ATUALIZAR_CALCULADORA] sessionId:', Storage.getSessionId?.() || 'N/A');
+    console.log('[ATUALIZAR_CALCULADORA] telefone:', Storage.getTelefoneDigitos());
+
     try {
         const leadRef = doc(db, "leads", leadId);
 
@@ -149,7 +166,8 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
             })
         );
         console.log('[leadService] Validação OK — atualizar calculadora', leadId);
-        console.log('[STATUS_TRACE_ENTRADA] endereco:', dadosValidados.endereco);
+        console.log('[ATUALIZAR_CALCULADORA_ENDERECO_ANTES] endereco recebido:', dadosCalculo.endereco);
+        console.log('[ATUALIZAR_CALCULADORA_ENDERECO_VALIDADO] endereco após validação:', dadosValidados.endereco);
 
         // Recupera kits para salvar no lead
         const kits = Storage.getKits();
@@ -164,8 +182,22 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
             ultima_acao_nome: 'Fez Simulação'
         };
 
-        console.log('[STATUS_TRACE_PAYLOAD] endereco:', payloadUpdate.endereco);
-        console.log('[STATUS_TRACE_PAYLOAD_COMPLETO]', JSON.stringify(payloadUpdate));
+        console.log('[ATUALIZAR_CALCULADORA_PAYLOAD] endereco no payload:', payloadUpdate.endereco);
+        console.log('[ATUALIZAR_CALCULADORA_PAYLOAD] status no payload:', payloadUpdate.status);
+        console.log('[ATUALIZAR_CALCULADORA_PAYLOAD_COMPLETO]', JSON.stringify(payloadUpdate, null, 2));
+
+        await updateDoc(leadRef, payloadUpdate);
+
+        console.log("Lead atualizado com dados da calculadora.");
+        
+        // Ler imediatamente do Firestore
+        const snapCalculadora = await getDoc(leadRef);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] id:', snapCalculadora.id);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] status:', snapCalculadora.data()?.status);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] endereco:', snapCalculadora.data()?.endereco);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] sessionId:', snapCalculadora.data()?.sessionId);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] nome:', snapCalculadora.data()?.nome);
+        console.log('[ATUALIZAR_CALCULADORA_FIRESTORE] COMPLETO]', JSON.stringify(snapCalculadora.data(), null, 2));
 
         await updateDoc(leadRef, payloadUpdate);
 
@@ -188,11 +220,22 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
         return;
     }
 
+    console.log('[ATUALIZAR_WHATSAPP] leadId:', leadId);
+    console.log('[ATUALIZAR_WHATSAPP] sessionId:', Storage.getSessionId?.() || 'N/A');
+    console.log('[ATUALIZAR_WHATSAPP] telefone:', Storage.getTelefoneDigitos());
+
     try {
         const kitValidado = assertValido(validarKitWhatsApp(kit));
         console.log('[leadService] Validação OK — atualizar WhatsApp', leadId);
 
         const leadRef = doc(db, "leads", leadId);
+        
+        // Ler ANTES do update
+        const snapAntes = await getDoc(leadRef);
+        console.log('[ATUALIZAR_WHATSAPP_ANTES] status:', snapAntes.data()?.status);
+        console.log('[ATUALIZAR_WHATSAPP_ANTES] endereco:', snapAntes.data()?.endereco);
+        console.log('[ATUALIZAR_WHATSAPP_ANTES] kitEscolhido:', snapAntes.data()?.kitEscolhido);
+        
         const payloadWhatsApp = {
             kitEscolhido: kitValidado.kit || kitValidado.nome || "",
             sistemaEscolhido: sistemaEscolhido || kitValidado.sistema || "Microinversor",
@@ -210,12 +253,18 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
             atualizadoEm: new Date().toISOString()
         };
 
-        console.log('[STATUS_TRACE_WHATSAPP_ANTES] payload enviado:', JSON.stringify(payloadWhatsApp));
-        console.log('[STATUS_TRACE_WHATSAPP_ANTES] status presente no payload?', 'status' in payloadWhatsApp);
+        console.log('[ATUALIZAR_WHATSAPP_PAYLOAD] enviando:', JSON.stringify(payloadWhatsApp));
+        console.log('[ATUALIZAR_WHATSAPP_PAYLOAD] status presente?', 'status' in payloadWhatsApp);
 
         await updateDoc(leadRef, payloadWhatsApp);
         
-        console.log('[STATUS_TRACE_WHATSAPP_DEPOIS] updateDoc executado sem status');
+        // Ler DEPOIS do update
+        const snapDepois = await getDoc(leadRef);
+        console.log('[ATUALIZAR_WHATSAPP_DEPOIS] status:', snapDepois.data()?.status);
+        console.log('[ATUALIZAR_WHATSAPP_DEPOIS] endereco:', snapDepois.data()?.endereco);
+        console.log('[ATUALIZAR_WHATSAPP_DEPOIS] kitEscolhido:', snapDepois.data()?.kitEscolhido);
+        console.log('[ATUALIZAR_WHATSAPP_DEPOIS_COMPLETO]', JSON.stringify(snapDepois.data(), null, 2));
+        
         console.log("Lead atualizado para WhatsApp com sucesso com detalhes do Kit.");
         timeline(leadId, TIMELINE_TIPOS.ESCOLHEU_KIT, {
             kit: kitValidado.kit,
