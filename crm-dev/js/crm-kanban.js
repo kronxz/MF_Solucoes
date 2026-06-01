@@ -23,12 +23,11 @@ function escHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-const COLUNAS = ['novo', 'contato', 'proposta', 'negociacao', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
+const COLUNAS = ['novo', 'contato', 'proposta', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
 const TITULOS = {
   novo: '🟡 Novos',
   contato: '🔵 Contato',
   proposta: '🟠 Proposta',
-  negociacao: '🟣 Negociação',
   fechado: '🟢 Fechado',
   instalacao: '🔧 Instalação',
   'pos-venda': '💼 Pós-Venda',
