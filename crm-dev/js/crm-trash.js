@@ -74,13 +74,21 @@ export function atualizarLeadsLixeira(leads) {
 export const atualizarLeadsTrash = atualizarLeadsLixeira;
 
 export function abrirLixeira() {
+  console.log('[CRM-Trash] abrirLixeira() chamado!');
   const modal = document.getElementById('modalLixeira');
-  if (!modal) return;
+  console.log('[CRM-Trash] modal encontrado?', !!modal);
+  if (!modal) {
+    console.error('[CRM-Trash] ERRO: modal não encontrado! Não posso abrir a lixeira.');
+    return;
+  }
+  console.log('[CRM-Trash] Adicionando classe "ativo" ao modal');
   modal.classList.add('ativo');
   modal.setAttribute('aria-hidden', 'false');
   const inp = document.getElementById('pesquisaLixeira');
   if (inp) inp.value = '';
+  console.log('[CRM-Trash] Chamando renderLixeira()');
   renderLixeira();
+  console.log('[CRM-Trash] Lixeira aberta com sucesso!');
 }
 
 export function fecharLixeira() {
