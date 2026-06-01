@@ -24,13 +24,26 @@ export function iniciarLixeira(db) {
   const pesquisa = document.getElementById('pesquisaLixeira');
   const lista = document.getElementById('listaLixeira');
 
+  console.log('[CRM-Trash] Inicializando lixeira...');
+  console.log('[CRM-Trash] btnAbrir encontrado?', !!btnAbrir);
+  console.log('[CRM-Trash] btnFechar encontrado?', !!btnFechar);
+  console.log('[CRM-Trash] modal encontrado?', !!modal);
+  console.log('[CRM-Trash] pesquisa encontrada?', !!pesquisa);
+  console.log('[CRM-Trash] lista encontrada?', !!lista);
+
   if (!btnAbrir) console.warn('[CRM-Trash] botão Lixeira não encontrado');
   if (!btnFechar) console.warn('[CRM-Trash] botão fechar lixeira não encontrado');
   if (!modal) console.warn('[CRM-Trash] modal da lixeira não encontrado');
   if (!pesquisa) console.warn('[CRM-Trash] campo de pesquisa da lixeira não encontrado');
   if (!lista) console.warn('[CRM-Trash] lista da lixeira não encontrada');
 
-  btnAbrir?.addEventListener('click', abrirLixeira);
+  if (btnAbrir) {
+    console.log('[CRM-Trash] Adicionando event listener ao botão Lixeira');
+    btnAbrir.addEventListener('click', () => {
+      console.log('[CRM-Trash] Botão Lixeira clicado!');
+      abrirLixeira();
+    });
+  }
   btnFechar?.addEventListener('click', fecharLixeira);
   modal?.addEventListener('click', e => {
     if (e.target.id === 'modalLixeira') fecharLixeira();
