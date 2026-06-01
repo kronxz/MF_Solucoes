@@ -106,6 +106,12 @@ async function executarSimulacao() {
 
     try {
         console.log("[SIMULADOR] Kits carregados:", kitsDisponiveis);
+        console.log("[SIMULADOR_DEBUG] Enviando para atualizarLeadCalculadora:", { 
+            endereco, 
+            contaDeLuz, 
+            consumoMensal, 
+            hasLeadId: !!Storage.getLeadId() 
+        });
         await atualizarLeadCalculadora({
             contaDeLuz,
             consumoMensal: Number(consumoMensal),
