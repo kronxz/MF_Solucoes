@@ -52,14 +52,11 @@ export function normalizarStatus(status) {
     novo: 'novo',
     contato: 'contato',
     proposta: 'proposta',
-    negociacao: 'negociacao',
-    'negociacao': 'negociacao',
     fechado: 'fechado',
     instalacao: 'instalacao',
     'pos-venda': 'pos-venda',
     'pos venda': 'pos-venda',
     'posvenda': 'pos-venda',
-    manutencao: 'manutencao',
     manutencao: 'manutencao'
   };
   return mapa[chave] || 'novo';
