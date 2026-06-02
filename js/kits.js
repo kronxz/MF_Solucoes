@@ -94,7 +94,7 @@ export function calcularKits(contaDeLuz, tariff = 0.95, hsp = 4.5, potenciaPlaca
     const overloadEssencial = (kwpEssencialReal / parseFloat(inversorEssencial)) * 100;
 
     const kitEssencial = criarKitPadrao(
-        "Microinversor",
+        "Inversor Tradicional",
         "Essencial",
         Number(kwpEssencialReal.toFixed(2)),
         Number(geracaoEssencial.toFixed(0)),
@@ -123,7 +123,7 @@ export function calcularKits(contaDeLuz, tariff = 0.95, hsp = 4.5, potenciaPlaca
     const overloadRecomendado = (kwpRecomendadoReal / parseFloat(inversorRecomendado)) * 100;
 
     const kitRecomendado = criarKitPadrao(
-        "Microinversor",
+        "Inversor Tradicional",
         "Recomendado ⭐",
         Number(kwpRecomendadoReal.toFixed(2)),
         Number(geracaoRecomendado.toFixed(0)),
@@ -151,7 +151,7 @@ export function calcularKits(contaDeLuz, tariff = 0.95, hsp = 4.5, potenciaPlaca
     const overloadPremium = (kwpPremiumReal / parseFloat(inversorPremium)) * 100;
 
     const kitPremium = criarKitPadrao(
-        "Microinversor",
+        "Inversor Tradicional",
         "Premium",
         Number(kwpPremiumReal.toFixed(2)),
         Number(geracaoPremium.toFixed(0)),

@@ -143,7 +143,7 @@ export async function criarLeadBase(nome, telefone, endereco) {
 }
 
 // Função para atualizar lead com dados da calculadora
-export async function atualizarLeadCalculadora(dadosCalculo) {
+export async function atualizarLeadCalculadora(dadosCalculo, endereco) {
     const leadId = Storage.getLeadId();
     if (!leadId) {
         console.error("Nenhum lead encontrado no cache para atualizar.");
@@ -165,7 +165,7 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
         // Recupera kits para salvar no lead
         const kits = Storage.getKits();
 
-        await updateDoc(leadRef, {
+        const payload = {
             ...dadosValidados,
             kits: kits,
             kitsDisponiveis: dadosValidados.kitsDisponiveis || null,
@@ -173,7 +173,11 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
             consumo: Number(dadosValidados.consumoMensal || 0),
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Fez Simulação'
-        });
+        };
+        if (endereco && endereco.trim()) {
+            payload.endereco = endereco.trim();
+        }
+        await updateDoc(leadRef, payload);
 
         console.log("Lead atualizado com dados da calculadora.");
         const tipoSimulacao = resolverTipoSimulacao(leadId);
@@ -186,7 +190,7 @@ export async function atualizarLeadCalculadora(dadosCalculo) {
 }
 
 // Função para quando o Lead escolhe um kit e clica no WhatsApp
-export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
+export async function atualizarLeadWhatsApp(kit, sistemaEscolhido, endereco) {
     const leadId = Storage.getLeadId();
     if (!leadId) {
         console.error("ID não encontrado para o WhatsApp");
@@ -199,8 +203,10 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
 
         const leadRef = doc(db, "leads", leadId);
         await updateDoc(leadRef, {
+            // Add address if provided
+            ...(endereco && endereco.trim() ? { endereco: endereco.trim() } : {}),
             kitEscolhido: kitValidado.kit || kitValidado.nome || "",
-            sistemaEscolhido: sistemaEscolhido || kitValidado.sistema || "Microinversor",
+            sistemaEscolhido: sistemaEscolhido || kitValidado.sistema || "Inversor Tradicional",
             investimento: Number(kitValidado.investimento || 0),
             geracao: Number(kitValidado.geracao || 0),
             economia: Number(kitValidado.economia || 0),
@@ -210,7 +216,7 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
             potenciaPlaca: Number(kitValidado.potenciaPlaca || 0),
             overload: Number(kitValidado.overload || 0),
             payback: Number(kitValidado.payback || 0),
-            status: 'Negociação',
+            // status field removed as per requirement
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Clicou WhatsApp',
             atualizadoEm: new Date().toISOString()
@@ -251,10 +257,13 @@ export async function atualizarEndereco(endereco) {
     try {
         const leadRef = doc(db, "leads", leadId);
         const payload = {
-            endereco: endereco.trim(),
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Preencheu Endereço'
         };
+
+        if (endereco && endereco.trim()) {
+            payload.endereco = endereco.trim();
+        }
 
         console.log("[LEAD_FLOW] Enviando atualização de endereço:", payload);
         await updateDoc(leadRef, payload);
