@@ -61,7 +61,24 @@ export function abrirProposta(lead) {
   }
 
   localStorage.setItem('propostaAbertaEm', new Date().toISOString());
-  // open proposal page from CRM public root
+
+  // Ensure explicit field mapping required by the legacy proposta.html
+  try {
+    localStorage.setItem('nome', String(payload.nome || ''));
+    localStorage.setItem('telefone', String(payload.telefone || ''));
+    localStorage.setItem('endereco', String(payload.endereco || ''));
+    localStorage.setItem('consumo', String(payload.consumoMensal || payload.consumo || ''));
+    localStorage.setItem('geracao', String(payload.geracaoMensal || payload.geracao || ''));
+    localStorage.setItem('kwp', String(payload.kwp || ''));
+    localStorage.setItem('placas', String(payload.placas || ''));
+    localStorage.setItem('investimento', String(payload.investimento || ''));
+    localStorage.setItem('economia', String(payload.economia || ''));
+    localStorage.setItem('payback', String(payload.payback || ''));
+  } catch (e) {
+    // ignore storage errors
+  }
+
+  // open proposal page from CRM public root (explicit absolute path)
   window.open('/proposta.html', '_blank');
   return true;
 }
