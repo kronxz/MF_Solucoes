@@ -3808,156 +3808,156 @@ document.getElementById(
 
   console.log("DADOS FINAIS:", dados)
 
-// ========================================
-// FINANCEIRO
-// ========================================
+  // ========================================
+  // FINANCEIRO
+  // ========================================
 
-// conta atual do cliente
-const contaAtual =
-Number(lead.valor || 0)
+  // conta atual do cliente
+  const contaAtual =
+  Number(lead.valor || 0)
 
-// geração mensal do sistema
-const geracaoMensalSistema =
-Number(dados.geracaoMensal || 0)
+  // geração mensal do sistema
+  const geracaoMensalSistema =
+  Number(dados.geracaoMensal || 0)
 
-// tarifa da concessionária
-const tarifaEnergia =
-Number(lead.tarifa || 0.95)
+  // tarifa da concessionária
+  const tarifaEnergia =
+  Number(lead.tarifa || 0.95)
 
-// economia mensal REAL
-const economiaMensal =
-Math.min(
-  geracaoMensalSistema * tarifaEnergia,
-  contaAtual
-)
+  // economia mensal REAL
+  const economiaMensal =
+  Math.min(
+    geracaoMensalSistema * tarifaEnergia,
+    contaAtual
+  )
 
-// economia anual
-const economiaAnual =
-economiaMensal * 12
+  // economia anual
+  const economiaAnual =
+  economiaMensal * 12
 
-// conta restante após solar
-const contaComSistema =
-Math.max(
-  contaAtual - economiaMensal,
-  80
-)
+  // conta restante após solar
+  const contaComSistema =
+  Math.max(
+    contaAtual - economiaMensal,
+    80
+  )
 
-// anual sem sistema
-const contaAnualSemSistema =
-contaAtual * 12
+  // anual sem sistema
+  const contaAnualSemSistema =
+  contaAtual * 12
 
-// anual com sistema
-const contaAnualComSistema =
-contaComSistema * 12
+  // anual com sistema
+  const contaAnualComSistema =
+  contaComSistema * 12
 
-console.log("FINANCEIRO:", {
-  contaAtual,
-  economiaMensal,
-  economiaAnual,
-  contaComSistema,
-  contaAnualSemSistema,
-  contaAnualComSistema
-})
+  console.log("FINANCEIRO:", {
+    contaAtual,
+    economiaMensal,
+    economiaAnual,
+    contaComSistema,
+    contaAnualSemSistema,
+    contaAnualComSistema
+  })
 
-// ==============================
-// CONTA SEM SISTEMA
-// ==============================
+  // ==============================
+  // CONTA SEM SISTEMA
+  // ==============================
 
-document.getElementById("semSistema").innerText =
-"R$ " +
-contaAtual.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-})
+  document.getElementById("semSistema").innerText =
+  "R$ " +
+  contaAtual.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  })
 
-// ==============================
-// CONTA COM SISTEMA
-// ==============================
+  // ==============================
+  // CONTA COM SISTEMA
+  // ==============================
 
-document.getElementById("comSistema").innerText =
-"R$ " +
-contaComSistema.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-})
+  document.getElementById("comSistema").innerText =
+  "R$ " +
+  contaComSistema.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  })
 
-// ==============================
-// ANUAL SEM SISTEMA
-// ==============================
+  // ==============================
+  // ANUAL SEM SISTEMA
+  // ==============================
 
-document.getElementById("anoSemSistema").innerText =
-"R$ " +
-contaAnualSemSistema.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-})
+  document.getElementById("anoSemSistema").innerText =
+  "R$ " +
+  contaAnualSemSistema.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  })
 
-// ==============================
-// ANUAL COM SISTEMA
-// ==============================
+  // ==============================
+  // ANUAL COM SISTEMA
+  // ==============================
 
-document.getElementById("anoComSistema").innerText =
-"R$ " +
-contaAnualComSistema.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-})
+  document.getElementById("anoComSistema").innerText =
+  "R$ " +
+  contaAnualComSistema.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  })
 
-// ==============================
-// ECONOMIA MENSAL
-// ==============================
+  // ==============================
+  // ECONOMIA MENSAL
+  // ==============================
 
-document.getElementById("economiaMensalTexto").innerText =
-"R$ " +
-economiaMensal.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-}) + "/mês"
+  document.getElementById("economiaMensalTexto").innerText =
+  "R$ " +
+  economiaMensal.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  }) + "/mês"
 
-// ==============================
-// ECONOMIA ANUAL
-// ==============================
+  // ==============================
+  // ECONOMIA ANUAL
+  // ==============================
 
-document.getElementById("economiaAnualTexto").innerText =
-"R$ " +
-economiaAnual.toLocaleString("pt-BR", {
-  minimumFractionDigits: 2
-}) + "/ano"
+  document.getElementById("economiaAnualTexto").innerText =
+  "R$ " +
+  economiaAnual.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2
+  }) + "/ano"
 
-// ========================================
-// PROJEÇÃO
-// ========================================
+  // ========================================
+  // PROJEÇÃO
+  // ========================================
 
-const projecao = document.getElementById("projecaoFinanceira")
+  const projecao = document.getElementById("projecaoFinanceira")
 
-if(projecao){
+  if(projecao){
 
-  projecao.innerHTML = `
-  
-    <div>
-      Em 1 ano:
-      <strong style="color:#16a34a;">
-        R$ ${economiaAnual.toLocaleString("pt-BR", {
-          minimumFractionDigits:2
-        })}
-      </strong>
-    </div>
+    projecao.innerHTML = `
+    
+      <div>
+        Em 1 ano:
+        <strong style="color:#16a34a;">
+          R$ ${economiaAnual.toLocaleString("pt-BR", {
+            minimumFractionDigits:2
+          })}
+        </strong>
+      </div>
 
-    <div>
-      Em 5 anos:
-      <strong style="color:#16a34a;">
-        R$ ${(economiaAnual * 5).toLocaleString("pt-BR", {
-          minimumFractionDigits:2
-        })}
-      </strong>
-    </div>
+      <div>
+        Em 5 anos:
+        <strong style="color:#16a34a;">
+          R$ ${(economiaAnual * 5).toLocaleString("pt-BR", {
+            minimumFractionDigits:2
+          })}
+        </strong>
+      </div>
 
-    <div>
-      Em 25 anos:
-      <strong style="color:#16a34a;">
-        R$ ${(economiaAnual * 25).toLocaleString("pt-BR", {
-          minimumFractionDigits:2
-        })}
-      </strong>
-    </div>
+      <div>
+        Em 25 anos:
+        <strong style="color:#16a34a;">
+          R$ ${(economiaAnual * 25).toLocaleString("pt-BR", {
+            minimumFractionDigits:2
+          })}
+        </strong>
+      </div>
 
-  `
-}
+    `
+  }
 
 }
 
