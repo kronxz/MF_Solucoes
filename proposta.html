@@ -1648,7 +1648,7 @@ gap:12px;
 z-index:10;
 ">
 
-      <img src="logo%20mf.jpg" style="
+      <img src="../logo.jpg" style="
     width:70px;
     height:70px;
     border-radius:50%;
@@ -3808,9 +3808,6 @@ document.getElementById(
 
   console.log("DADOS FINAIS:", dados)
 
-}
-
-
 // ========================================
 // FINANCEIRO
 // ========================================
@@ -3962,6 +3959,8 @@ if(projecao){
   `
 }
 
+}
+
 
 // ========================================
 // GRÁFICO SISTEMA
@@ -3976,7 +3975,7 @@ if(projecao){
 const ctxFinanceiro =
   document.getElementById("graficoFinanceiro")
 
-if(ctxFinanceiro){
+if(ctxFinanceiro && typeof economiaAnual !== 'undefined'){
 
   new Chart(ctxFinanceiro, {
 
