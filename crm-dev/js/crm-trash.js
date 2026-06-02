@@ -2,7 +2,7 @@
  * crm-trash.js — Lixeira: busca, restaurar, excluir permanente
  */
 
-import { doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, doc, getDocs, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { toast, escHtml } from './crm-utils.js';
 
 let _db = null;
@@ -14,6 +14,12 @@ function formatarData(dataISO) {
   const d = new Date(dataISO);
   if (Number.isNaN(d.getTime())) return '—';
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} - ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
+async function carregarLeadsLixeira() {
+  if (!_db) return;
+  const snapshot = await getDocs(collection(_db, 'leads'));
+  _leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
 export function iniciarLixeira(db) {
@@ -60,13 +66,14 @@ export function atualizarLeadsLixeira(leads) {
 
 export const atualizarLeadsTrash = atualizarLeadsLixeira;
 
-export function abrirLixeira() {
+export async function abrirLixeira() {
   const modal = document.getElementById('modalLixeira');
   if (!modal) return;
   modal.classList.add('ativo');
   modal.setAttribute('aria-hidden', 'false');
   const inp = document.getElementById('pesquisaLixeira');
   if (inp) inp.value = '';
+  await carregarLeadsLixeira();
   renderLixeira();
 }
 

@@ -56,13 +56,16 @@ export function carregarInstalacoes(onUpdate) {
 }
 
 export function carregarLeadsMap(onUpdate) {
-  const q = query(collection(_db, 'leads'), where('deletado', '!=', true));
+  const q = query(collection(_db, 'leads'));
   return onSnapshot(q, (snapshot) => {
+    console.log('[INST_QUERY_SIZE]', snapshot.size);
     _leadsMap = {};
     snapshot.docs.forEach(doc => {
-      const leadData = { id: doc.id, ...doc.data() };
+      const data = doc.data();
+      const leadData = { id: doc.id, ...data };
       _leadsMap[doc.id] = leadData;
     });
+    console.log('[INST_MAP_SIZE]', Object.keys(_leadsMap).length);
     onUpdate(_leadsMap);
   });
 }
