@@ -1,5 +1,5 @@
 import { calcularSimulacao } from './calc.js';
-import { criarLeadBase, atualizarLeadCalculadora } from '../services/leadService.js';
+import { criarLeadBase, atualizarLeadCalculadora, atualizarEndereco } from '../services/leadService.js';
 import { abrirWhatsApp } from './whatsapp.js';
 import { captureUTM } from './utm.js';
 import { salvarEvento, adicionarScore } from './analytics.js';
@@ -53,14 +53,28 @@ document.addEventListener('DOMContentLoaded', () => {
         inputTelefone.addEventListener('blur', async () => {
             const nome = document.getElementById('clienteNome')?.value || "Não informado";
             const telefoneLimpo = inputTelefone.value.replace(/\D/g, '');
+            const enderecoBurr = document.getElementById('endereco')?.value || '';
             if (telefoneLimpo.length >= 10) {
                 try {
-                    await criarLeadBase(nome, inputTelefone.value);
+                    await criarLeadBase(nome, inputTelefone.value, enderecoBurr);
                 } catch(err) {
                     console.log("Erro ao criar lead base", err);
                 }
             }
         });
+
+        const inputEndereco = document.getElementById('endereco');
+        if (inputEndereco) {
+            inputEndereco.addEventListener('blur', async () => {
+                const enderecoVal = inputEndereco.value.trim();
+                if (!enderecoVal || enderecoVal.length < 5) return;
+                try {
+                    await atualizarEndereco(enderecoVal);
+                } catch (err) {
+                    console.log("Erro ao atualizar endereco", err);
+                }
+            });
+        }
     }
 
     const btnCalcular = document.getElementById('btnCalcular');

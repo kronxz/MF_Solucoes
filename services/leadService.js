@@ -72,8 +72,8 @@ async function reutilizarLeadExistente(leadId, dadosValidados) {
     return leadId;
 }
 
-// Função para criar o lead BASE (Nome + Telefone)
-export async function criarLeadBase(nome, telefone) {
+// Função para criar o lead BASE (Nome + Telefone + Endereco opcional)
+export async function criarLeadBase(nome, telefone, endereco) {
     try {
         const dadosValidados = assertValido(validarLeadBase({ nome, telefone }));
         const { telefoneDigitos } = dadosValidados;
@@ -115,6 +115,10 @@ export async function criarLeadBase(nome, telefone) {
             ultima_acao_nome: 'Deixou Contato'
         };
 
+        // Inclui endereco no documento inicial se já foi preenchido pelo usuário
+        if (endereco && typeof endereco === 'string' && endereco.trim() !== '') {
+            leadData.endereco = endereco.trim();
+        }
         const docRef = await addDoc(collection(db, "leads"), leadData);
         console.log('[leadService] Lead base criado (novo):', docRef.id);
 
@@ -218,3 +222,29 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
         throw e;
     }
 }
+
+// Função para atualizar apenas o campo endereço de um lead existente
+export async function atualizarEndereco(endereco) {
+    const leadId = Storage.getLeadId();
+    if (!leadId) {
+        console.warn("[LEAD_FLOW] Tentativa de atualizar endereço, mas nenhum leadId foi encontrado no Storage.");
+        return;
+    }
+
+    try {
+        const leadRef = doc(db, "leads", leadId);
+        const payload = {
+            endereco: endereco.trim(),
+            lastAction: serverTimestamp(),
+            ultima_acao_nome: 'Preencheu Endereço'
+        };
+
+        console.log("[LEAD_FLOW] Enviando atualização de endereço:", payload);
+        await updateDoc(leadRef, payload);
+        console.log("[LEAD_FLOW] Endereço atualizado com sucesso no Firestore para o ID:", leadId);
+    } catch (e) {
+        console.error("[LEAD_FLOW] Erro ao atualizar endereço no Firestore:", e);
+        throw e;
+    }
+}
+
