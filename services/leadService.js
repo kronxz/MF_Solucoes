@@ -14,6 +14,9 @@ import {
 } from './timelineService.js';
 import { aplicarScoreIncremental, sincronizarScoreCache } from './scoreService.js';
 
+let leadCreationPromise = null;
+
+
 /** Timeline não bloqueia o fluxo principal */
 function timeline(leadId, tipo, meta) {
     if (!leadId) return;
@@ -74,7 +77,7 @@ async function reutilizarLeadExistente(leadId, dadosValidados) {
 
 // Função para criar o lead BASE (Nome + Telefone + Endereco opcional)
 export async function criarLeadBase(nome, telefone, endereco) {
-    try {
+    leadCreationPromise = (async () => {
         const dadosValidados = assertValido(validarLeadBase({ nome, telefone }));
         const { telefoneDigitos } = dadosValidados;
         console.log('[leadService] Validação OK — criar lead base', telefoneDigitos);
@@ -127,10 +130,15 @@ export async function criarLeadBase(nome, telefone, endereco) {
         timeline(docRef.id, TIMELINE_TIPOS.CRIOU_LEAD, { telefoneDigitos });
         score(docRef.id, TIMELINE_TIPOS.CRIOU_LEAD);
         return docRef.id;
+    })();
 
+    try {
+        return await leadCreationPromise;
     } catch (e) {
         console.error("[leadService] ERRO DETALHADO:", e);
         throw e;
+    } finally {
+        leadCreationPromise = null;
     }
 }
 
@@ -225,6 +233,15 @@ export async function atualizarLeadWhatsApp(kit, sistemaEscolhido) {
 
 // Função para atualizar apenas o campo endereço de um lead existente
 export async function atualizarEndereco(endereco) {
+    if (leadCreationPromise) {
+        console.log("[LEAD_FLOW] Criação do lead base em andamento. Aguardando conclusão para atualizar endereço...");
+        try {
+            await leadCreationPromise;
+        } catch (e) {
+            console.error("[LEAD_FLOW] Erro ao aguardar criação do lead base:", e);
+        }
+    }
+
     const leadId = Storage.getLeadId();
     if (!leadId) {
         console.warn("[LEAD_FLOW] Tentativa de atualizar endereço, mas nenhum leadId foi encontrado no Storage.");
