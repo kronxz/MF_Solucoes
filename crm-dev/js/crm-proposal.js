@@ -79,6 +79,6 @@ export function abrirProposta(lead) {
   }
 
   // open proposal page from CRM public root (explicit absolute path)
-  window.open('/proposta.html', '_blank');
+  window.open(location.origin + '/proposta.html', '_blank');
   return true;
 }
