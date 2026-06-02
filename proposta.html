@@ -1648,7 +1648,7 @@ gap:12px;
 z-index:10;
 ">
 
-      <img src="../logo.jpg" style="
+      <img src="logo.jpg" style="
     width:70px;
     height:70px;
     border-radius:50%;
@@ -2595,9 +2595,7 @@ z-index:20;
 
           ESTRUTURA DE FIXAÇÃO CERÂMICA<br>
 
-          <strong>Quantidade:</strong> 1<br>
-          <strong>Kit recomendado:</strong> <span id="kitRecomendado">—</span><br>
-          <strong>Kits alternativos:</strong> <span id="kitsAlternativos">—</span>
+          <strong>Quantidade:</strong> 1
 
         </div>
 
@@ -3737,20 +3735,7 @@ if(typeof fin === 'object' && Object.keys(fin).length > 0){
 }
 
 // CONEXÃO 3 E 4: KITS
-const kits = lead.kitsDisponiveis || lead.kits || JSON.parse(localStorage.getItem('kitsDisponiveis') || localStorage.getItem('kitsCalculados') || '{}')
-if(typeof kits === 'object' && Object.keys(kits).length > 0){
-  const recKit = kits.recomendado || kits.essencial || Object.values(kits)[0]
-  if(recKit && recKit.nome && document.getElementById("kitRecomendado")){
-    const txt = `${recKit.nome} · ${recKit.kwp || '-'} kWp · R$ ${Number(recKit.investimento || 0).toLocaleString('pt-BR')}`
-    document.getElementById("kitRecomendado").innerText = txt
-  }
-  const altKits = Object.entries(kits)
-    .filter(([k]) => k !== 'recomendado' && k !== 'essencial')
-    .map(([,k]) => k.nome || k)
-  if(altKits.length > 0 && document.getElementById("kitsAlternativos")){
-    document.getElementById("kitsAlternativos").innerText = altKits.join(' / ')
-  }
-}
+// Removed - HTML elements deleted
 
   // 🔥 GERADOR DE NÚMERO
 
@@ -3826,10 +3811,9 @@ document.getElementById(
 
   // economia mensal REAL
   const economiaMensal =
-  Math.min(
-    geracaoMensalSistema * tarifaEnergia,
-    contaAtual
-  )
+  geracaoMensalSistema * tarifaEnergia > 0 
+    ? Math.min(geracaoMensalSistema * tarifaEnergia, contaAtual)
+    : contaAtual * 0.90
 
   // economia anual
   const economiaAnual =
