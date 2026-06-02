@@ -1,0 +1,370 @@
+{
+  "name": "projects/mf-solucoes-dev/databases/(default)/documents/leads/NCGvLEgaKfbOtJrebRpH",
+  "fields": {
+    "tarifa": {
+      "doubleValue": 0.95
+    },
+    "gclid": {
+      "stringValue": ""
+    },
+    "consumo": {
+      "integerValue": "526"
+    },
+    "score": {
+      "integerValue": "30"
+    },
+    "geracaoMensal": {
+      "doubleValue": 645.12
+    },
+    "kitsDisponiveis": {
+      "mapValue": {
+        "fields": {
+          "recomendado": {
+            "mapValue": {
+              "fields": {
+                "descricaoPlano": {
+                  "stringValue": "✔ Melhor custo-benefício<br>✔ Mais estabilidade<br>✔ Preparado para aumento de consumo"
+                },
+                "kwp": {
+                  "doubleValue": 5.6
+                },
+                "economia": {
+                  "integerValue": "613"
+                },
+                "placas": {
+                  "integerValue": "8"
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "excedente": {
+                  "integerValue": "113"
+                },
+                "overload": {
+                  "integerValue": "112"
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "geracao": {
+                  "integerValue": "645"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "inversor": {
+                  "stringValue": "5 kW"
+                },
+                "investimento": {
+                  "integerValue": "19040"
+                },
+                "kit": {
+                  "stringValue": "Recomendado ⭐"
+                }
+              }
+            }
+          },
+          "essencial": {
+            "mapValue": {
+              "fields": {
+                "descricaoPlano": {
+                  "stringValue": "✔ Menor investimento<br>✔ Resolve seu consumo atual"
+                },
+                "kwp": {
+                  "doubleValue": 4.2
+                },
+                "excedente": {
+                  "integerValue": "0"
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "economia": {
+                  "integerValue": "460"
+                },
+                "placas": {
+                  "integerValue": "6"
+                },
+                "overload": {
+                  "integerValue": "84"
+                },
+                "geracao": {
+                  "integerValue": "484"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "inversor": {
+                  "stringValue": "5 kW"
+                },
+                "kit": {
+                  "stringValue": "Essencial"
+                },
+                "investimento": {
+                  "integerValue": "14280"
+                }
+              }
+            }
+          },
+          "premium": {
+            "mapValue": {
+              "fields": {
+                "descricaoPlano": {
+                  "stringValue": "✔ Máxima performance<br>✔ Maior geração<br>✔ Ideal para crescimento futuro"
+                },
+                "excedente": {
+                  "integerValue": "266"
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "economia": {
+                  "integerValue": "766"
+                },
+                "placas": {
+                  "integerValue": "10"
+                },
+                "kwp": {
+                  "integerValue": "7"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "geracao": {
+                  "integerValue": "806"
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "overload": {
+                  "integerValue": "88"
+                },
+                "kit": {
+                  "stringValue": "Premium"
+                },
+                "investimento": {
+                  "integerValue": "23800"
+                },
+                "inversor": {
+                  "stringValue": "8 kW"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bairroQR": {
+      "stringValue": ""
+    },
+    "potenciaPlaca": {
+      "integerValue": "700"
+    },
+    "utm_medium": {
+      "stringValue": ""
+    },
+    "pagina_origem": {
+      "stringValue": "/"
+    },
+    "kits": {
+      "arrayValue": {
+        "values": [
+          {
+            "mapValue": {
+              "fields": {
+                "overload": {
+                  "integerValue": "84"
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "geracao": {
+                  "integerValue": "484"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "inversor": {
+                  "stringValue": "5 kW"
+                },
+                "investimento": {
+                  "integerValue": "14280"
+                },
+                "kit": {
+                  "stringValue": "Essencial"
+                },
+                "descricaoPlano": {
+                  "stringValue": "✔ Menor investimento<br>✔ Resolve seu consumo atual"
+                },
+                "kwp": {
+                  "doubleValue": 4.2
+                },
+                "placas": {
+                  "integerValue": "6"
+                },
+                "economia": {
+                  "integerValue": "460"
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "excedente": {
+                  "integerValue": "0"
+                }
+              }
+            }
+          },
+          {
+            "mapValue": {
+              "fields": {
+                "kwp": {
+                  "doubleValue": 5.6
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "placas": {
+                  "integerValue": "8"
+                },
+                "economia": {
+                  "integerValue": "613"
+                },
+                "excedente": {
+                  "integerValue": "113"
+                },
+                "descricaoPlano": {
+                  "stringValue": "✔ Melhor custo-benefício<br>✔ Mais estabilidade<br>✔ Preparado para aumento de consumo"
+                },
+                "inversor": {
+                  "stringValue": "5 kW"
+                },
+                "kit": {
+                  "stringValue": "Recomendado ⭐"
+                },
+                "investimento": {
+                  "integerValue": "19040"
+                },
+                "overload": {
+                  "integerValue": "112"
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "geracao": {
+                  "integerValue": "645"
+                }
+              }
+            }
+          },
+          {
+            "mapValue": {
+              "fields": {
+                "inversor": {
+                  "stringValue": "8 kW"
+                },
+                "kit": {
+                  "stringValue": "Premium"
+                },
+                "investimento": {
+                  "integerValue": "23800"
+                },
+                "overload": {
+                  "integerValue": "88"
+                },
+                "potenciaPlaca": {
+                  "integerValue": "700"
+                },
+                "payback": {
+                  "doubleValue": 2.6
+                },
+                "geracao": {
+                  "integerValue": "806"
+                },
+                "kwp": {
+                  "integerValue": "7"
+                },
+                "sistema": {
+                  "stringValue": "Microinversor"
+                },
+                "economia": {
+                  "integerValue": "766"
+                },
+                "placas": {
+                  "integerValue": "10"
+                },
+                "excedente": {
+                  "integerValue": "266"
+                },
+                "descricaoPlano": {
+                  "stringValue": "✔ Máxima performance<br>✔ Maior geração<br>✔ Ideal para crescimento futuro"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "telefone": {
+      "stringValue": "(21) 99999-8888"
+    },
+    "consumoMensal": {
+      "integerValue": "526"
+    },
+    "fbclid": {
+      "stringValue": ""
+    },
+    "utm_source": {
+      "stringValue": "direto"
+    },
+    "endereco": {
+      "stringValue": "Rua Floresta Verde, 123 - Maricá"
+    },
+    "sessionId": {
+      "stringValue": "db09d59c-87de-422f-8006-006b77a12b68"
+    },
+    "nome": {
+      "stringValue": "Marcos Forense"
+    },
+    "contaDeLuz": {
+      "integerValue": "500"
+    },
+    "dispositivo": {
+      "stringValue": "Desktop"
+    },
+    "ultima_acao_nome": {
+      "stringValue": "Instalação agendada"
+    },
+    "lastAction": {
+      "stringValue": "2026-06-01T23:41:22.299Z"
+    },
+    "temperatura": {
+      "stringValue": "Morno"
+    },
+    "status": {
+      "stringValue": "instalacao"
+    },
+    "valor": {
+      "integerValue": "500"
+    },
+    "hsp": {
+      "doubleValue": 4.8
+    },
+    "telefoneDigitos": {
+      "stringValue": "21999998888"
+    },
+    "utm_campaign": {
+      "stringValue": ""
+    },
+    "createdAt": {
+      "timestampValue": "2026-06-01T23:26:18.578Z"
+    }
+  },
+  "createTime": "2026-06-01T23:26:18.614626Z",
+  "updateTime": "2026-06-01T23:37:29.305156Z"
+}
