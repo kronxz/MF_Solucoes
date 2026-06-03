@@ -8,8 +8,9 @@ import {
   onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-  collection, query, where, orderBy, limit, onSnapshot
+  collection, query, where, orderBy, limit, onSnapshot, getFirestore
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { LEADS_LIMIT } from './crm-config.js';
 
 // Módulos CRM Dev
@@ -42,6 +43,8 @@ let _syncFlashTimer = null;
 let _backupSaveTimer = null;
 let _leadsMap = new Map();
 let _atualizarTimer = null;
+let landingLeads = [];
+let unsubscribeLanding = null;
 
 // ─── NAVEGAÇÃO ────────────────────────────────────────────────
 function mostrarPagina(pageId) {
@@ -69,7 +72,10 @@ function mostrarPagina(pageId) {
   if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm);
   if (pageId === 'visitasPage') renderizarVisitas(eventos);
   if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
-  if (pageId === 'leadsPage') renderizarKanban(leads);
+  if (pageId === 'leadsPage') {
+    const leadsUnificados = [...leads, ...landingLeads];
+    renderizarKanban(leadsUnificados);
+  }
   if (pageId === 'instalacoesPage') {
     atualizarOpcoesInstalacao();
     renderizarListaInstalacoes('instalacoesLista');
@@ -110,7 +116,11 @@ function iniciarNavegacao() {
 function atualizarTudo() {
   showKanbanSkeleton(false);
   const paginaAtiva = document.querySelector('.page.active')?.id;
-  if (paginaAtiva === 'leadsPage') renderizarKanban(leads);
+  if (paginaAtiva === 'leadsPage') {
+    const leadsUnificados = [...leads, ...landingLeads];
+    console.log('[UNIFICADO] renderizarKanban com', leadsUnificados.length, 'leads');
+    renderizarKanban(leadsUnificados);
+  }
   if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
@@ -158,6 +168,7 @@ function atualizarTudo() {
 // ─── LISTENERS REALTIME ───────────────────────────────────────
 function limparListeners() {
   if (typeof unsubscribeLeads === 'function') { unsubscribeLeads(); unsubscribeLeads = null; }
+  if (typeof unsubscribeLanding === 'function') { unsubscribeLanding(); unsubscribeLanding = null; }
   pararRealtimeEventos();
   unsubscribeEventos = null;
   pararTecnico();
@@ -219,6 +230,57 @@ function iniciarRealtimeLeads(userId) {
   );
 }
 
+function iniciarRealtimeLanding() {
+  if (unsubscribeLanding) { unsubscribeLanding(); }
+
+  const PROD_CONFIG = {
+    apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
+    authDomain:        'mf-solucoes-crm.firebaseapp.com',
+    projectId:         'mf-solucoes-crm',
+    storageBucket:     'mf-solucoes-crm.firebasestorage.app',
+    messagingSenderId: '492242482187',
+    appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
+  };
+  const existingApp = getApps().find(a => a.name === 'lp-prod');
+  const prodApp     = existingApp || initializeApp(PROD_CONFIG, 'lp-prod');
+  const dbProd      = getFirestore(prodApp);
+
+  const q = query(collection(dbProd, 'lp_leads'), orderBy('createdAt', 'desc'));
+
+  unsubscribeLanding = onSnapshot(q, snap => {
+    landingLeads = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id:          d.id,
+        origemTipo:  'landing',
+        origemLabel: 'LANDING PAGE',
+        // campos obrigatórios para o Kanban
+        nome:        data.nome        || '(sem nome)',
+        telefone:    data.telefone    || '',
+        valor:       data.valorConta  || '',
+        status:      data.status && data.status !== 'excluido' ? data.status : (data.status === 'excluido' ? data.status : 'novo'),
+        deletado:    data.status === 'excluido' || data.deletado || false,
+        createdAt:   data.createdAt   || new Date().toISOString(),
+        // preserva todos os campos originais
+        ...data,
+        // garante que id e origemTipo não sejam sobrescritos por ...data
+        id:          d.id,
+        origemTipo:  'landing',
+        origemLabel: 'LANDING PAGE',
+      };
+    });
+
+    console.log('[LANDING] landingLeads.length:', landingLeads.length);
+    console.log('[UNIFICADO] total:', leads.length + landingLeads.length);
+
+    // Atualiza o Kanban se estiver visível
+    if (_atualizarTimer) clearTimeout(_atualizarTimer);
+    _atualizarTimer = setTimeout(() => { atualizarTudo(); _atualizarTimer = null; }, 150);
+  }, err => {
+    console.error('[LANDING] onSnapshot lp_leads erro:', err);
+  });
+}
+
 function iniciarRealtimeEventosCRM(userId) {
   unsubscribeEventos = iniciarRealtimeEventos(
     db,
@@ -277,6 +339,7 @@ onAuthStateChanged(auth, async (user) => {
   console.log('[FIRESTORE] Registrando listeners em tempo real para leads e eventos...');
   iniciarNotepad(db, user.uid);
   iniciarRealtimeLeads(user.uid);
+  iniciarRealtimeLanding();
   iniciarRealtimeEventosCRM(user.uid);
 
   initInstalacoes(db);
