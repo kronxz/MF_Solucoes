@@ -107,7 +107,13 @@ export function renderHtmlKitResumo(lead, esc) {
 </div>`;
   }).join('');
 
+  const origemLabel = lead.origemSistema === 'landing' ? '🔵 LANDING PAGE' : '🟢 CALCULADORA';
+  const origemCor   = lead.origemSistema === 'landing' ? '#60a5fa' : '#4ade80';
+  const origemBg    = lead.origemSistema === 'landing' ? '#1e3a5f' : '#052e16';
+  const origemBorder= lead.origemSistema === 'landing' ? '#2563eb' : '#16a34a';
+
   return `
+<p style="margin:0 0 12px"><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${origemBg};color:${origemCor};border:1px solid ${origemBorder}">${origemLabel}</span></p>
 <h3 style="margin:16px 0 8px;font-size:15px">🏷️ Kit selecionado</h3>
 <p><b>${esc(escolhido)}</b>${inv ? ` · Investimento lead: <b>R$ ${inv.toLocaleString('pt-BR')}</b>` : ''}</p>
 <h3 style="margin:16px 0 8px;font-size:15px">📦 Kits disponíveis${tag}</h3>

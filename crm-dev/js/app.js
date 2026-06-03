@@ -30,7 +30,7 @@ import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarLista
 import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage, getTecnicoMap } from './crm-tecnico.js';
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
-import { iniciarLeadsLanding, renderizarLeadsLanding } from './crm-leads-landing.js';
+// crm-leads-landing.js — módulo SPA removido; lp_leads integrado ao Kanban principal via iniciarRealtimeLanding
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
 let leads = [];
@@ -89,7 +89,7 @@ function mostrarPagina(pageId) {
   if (pageId === 'notificacoesPage') {
     renderizarNotificacoesPage();
   }
-  if (pageId === 'leadsLandingPage') renderizarLeadsLanding();
+  // leadsLandingPage removido — leads landing aparecem na aba Leads principal
 }
 
 function iniciarNavegacao() {
@@ -346,7 +346,7 @@ onAuthStateChanged(auth, async (user) => {
   initTecnico(db);
   initFinanceiro(db);
   initNotificacoes(db);
-  iniciarLeadsLanding();
+  // iniciarLeadsLanding() removido — lp_leads carregado por iniciarRealtimeLanding()
   carregarInstalacoes(() => {
     if (document.getElementById('instalacoesPage')?.classList.contains('active')) {
       renderizarListaInstalacoes('instalacoesLista');

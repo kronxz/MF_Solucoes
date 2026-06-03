@@ -95,8 +95,13 @@ function criarCardHtml(lead) {
   const meio = lead.utm_medium || '-';
   const kit = lead.kitEscolhido || lead.sistema || '-';
 
+  const origemBadge = lead.origemSistema === 'landing'
+    ? '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#1e3a5f;color:#60a5fa;border:1px solid #2563eb">🔵 LANDING PAGE</span>'
+    : '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#052e16;color:#4ade80;border:1px solid #16a34a">🟢 CALCULADORA</span>';
+
   return `
 <div class="card" draggable="true" data-lead-id="${lead.id}">
+  ${origemBadge}
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>

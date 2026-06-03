@@ -54,9 +54,7 @@
       <button id="btn-leads" class="sidebar-btn" data-page="leadsPage">
         <span class="btn-icon">📋</span> Leads
       </button>
-      <button id="btn-leads-landing" class="sidebar-btn" data-page="leadsLandingPage">
-        <span class="btn-icon">🌐</span> Leads Landing
-      </button>
+
       <button id="btn-instalacoes" class="sidebar-btn" data-page="instalacoesPage">
         <span class="btn-icon">🔧</span> Instalações
       </button>
@@ -275,53 +273,6 @@
         </div>
         <div class="column" id="manutencao" data-status="manutencao" ondragover="event.preventDefault()" role="tabpanel">
           <h2>🛠️ Manutenção</h2>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- ─── LEADS LANDING PAGE ─── -->
-    <section id="leadsLandingPage" class="page" aria-label="Leads Landing">
-
-      <!-- Header -->
-      <div class="ll-spa-header">
-        <div class="ll-spa-titulo">
-          <span>🌐 Leads Landing</span>
-          <span class="ll-spa-badge-novos"><span id="llspa-counter">0</span> novos</span>
-        </div>
-        <div class="ll-spa-tabs">
-          <button id="llspa-tab-novos" class="ll-spa-tab ll-tab-ativa">📋 Novos</button>
-          <button id="llspa-tab-lixeira" class="ll-spa-tab">
-            🗑️ Lixeira <span class="ll-spa-badge-lixeira" id="llspa-lixeira-counter">0</span>
-          </button>
-        </div>
-      </div>
-
-      <div id="llspa-loading" class="ll-spa-loading">Carregando leads...</div>
-      <div id="llspa-grid" class="ll-spa-grid"></div>
-
-      <!-- Modal detalhes + kits -->
-      <div id="llspa-modal" class="ll-modal-overlay" style="display:none">
-        <div class="ll-modal-box">
-          <div class="ll-modal-header">
-            <span id="llspa-modal-nome" class="ll-modal-titulo"></span>
-            <button id="llspa-modal-fechar" class="ll-modal-fechar">✕</button>
-          </div>
-
-          <div class="ll-modal-body">
-            <table class="ll-modal-tabela">
-              <tbody id="llspa-modal-tabela"></tbody>
-            </table>
-
-            <!-- Kits disponíveis -->
-            <div id="llspa-kits-section" class="ll-kits-section" style="display:none">
-              <h3 class="ll-kits-titulo">⚡ Kits Disponíveis</h3>
-              <div id="llspa-kits-grid" class="ll-kits-grid"></div>
-              <button id="llspa-gerar-proposta" class="ll-spa-btn ll-spa-btn--proposta" disabled>
-                📄 Gerar Proposta
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

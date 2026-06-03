@@ -177,12 +177,17 @@ async function preencherAbaLead(lead) {
   if (timelineEl) iniciarTimelineRealtime(lead.id, timelineEl);
 
   if (infoEl) {
+    const origemLabel  = lead.origemSistema === 'landing' ? '🔵 LANDING PAGE' : '🟢 CALCULADORA';
+    const origemCor    = lead.origemSistema === 'landing' ? '#60a5fa' : '#4ade80';
+    const origemBg     = lead.origemSistema === 'landing' ? '#1e3a5f' : '#052e16';
+    const origemBorder = lead.origemSistema === 'landing' ? '#2563eb' : '#16a34a';
     infoEl.innerHTML = `
+<p><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${origemBg};color:${origemCor};border:1px solid ${origemBorder}">${origemLabel}</span></p>
 <p>👤 <b>Cliente:</b> ${esc(lead.nome)}</p>
 <p>📞 <b>Telefone:</b> ${esc(lead.telefone || '—')}</p>
 <p>📍 <b>Endereço:</b> ${esc(lead.endereco || '—')}</p>
 <p>🗓 <b>Cadastro:</b> ${formatarData(lead.createdAt || lead.data)}</p>
-<p>📍 <b>Origem:</b> ${esc(lead.utm_source || 'Direto')}</p>
+<p>📍 <b>Origem UTM:</b> ${esc(lead.utm_source || 'Direto')}</p>
 <p>📢 <b>Campanha:</b> ${esc(lead.utm_campaign || '—')}</p>
 <p>⚡ <b>Sistema:</b> ${esc(lead.sistema || '—')}</p>
 <p>💰 <b>Investimento:</b> R$ ${Number(lead.investimento || 0).toFixed(0)}</p>
@@ -207,11 +212,61 @@ ${renderHtmlKitResumo(lead, esc)}`;
   if (obsSt) obsSt.textContent = '';
 }
 
+// ─── INTELIGÊNCIA — LANDING PAGE ──────────────────────────────
+function preencherIntelLanding(lead, el) {
+  const score = Number(lead.score || 0);
+  const cor   = score >= 70 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#22c55e';
+  const nivel = score >= 70 ? '🔥 Muito Quente' : score >= 40 ? '🟡 Morno' : '🟢 Frio';
+  const sugestao = score >= 70
+    ? 'Lead pronto para abordagem imediata no WhatsApp.'
+    : score >= 40
+      ? 'Lead demonstrou interesse moderado. Agende follow-up.'
+      : 'Lead ainda frio. Aguarde mais interações.';
+
+  const tempo = Number(lead.tempoTotalSegundos || 0);
+  const minutos = Math.floor(tempo / 60);
+  const segundos = tempo % 60;
+  const tempoStr = tempo > 0
+    ? (minutos > 0 ? `${minutos} min ${segundos} s` : `${segundos} s`)
+    : '—';
+
+  const formatDt = iso => {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; }
+  };
+
+  el.innerHTML = `
+<div class="glass-card" style="padding:20px;margin-bottom:12px;border-left:4px solid ${cor}">
+  <div style="font-size:22px;font-weight:bold;color:${cor};margin-bottom:12px">${nivel}</div>
+  <div style="font-size:18px;margin-bottom:16px">🎯 Score: <b>${score}/100</b></div>
+  <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
+  <p>⏱ <b>Tempo na página:</b> ${esc(tempoStr)}</p>
+  <p>📜 <b>Scroll máximo:</b> ${lead.scrollMaximoPercentual != null ? esc(String(lead.scrollMaximoPercentual)) + '%' : '—'}</p>
+  <p>💬 <b>Cliques WhatsApp:</b> ${esc(String(lead.cliquesWhatsapp || 0))}</p>
+  <p>👤 <b>Digitou nome:</b> ${lead.digitouNome ? 'Sim' : 'Não'}</p>
+  <p>📞 <b>Digitou telefone:</b> ${lead.digitouTelefone ? 'Sim' : 'Não'}</p>
+  <p>📡 <b>UTM Source:</b> ${esc(lead.utm_source || '—')}</p>
+  <p>📢 <b>Campanha:</b> ${esc(lead.utm_campaign || '—')}</p>
+  <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
+  <p>🗓 <b>Primeira visita:</b> ${esc(formatDt(lead.firstVisit))}</p>
+  <p>🕐 <b>Última atividade:</b> ${esc(formatDt(lead.lastActivity || lead.createdAt))}</p>
+  <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
+  <p>💡 <b>Sugestão:</b> ${sugestao}</p>
+</div>`;
+}
+
 // ─── ABA INTELIGÊNCIA ─────────────────────────────────────────
 async function preencherAbaInteligencia(lead) {
   const el = document.getElementById('analyticsLead');
   if (!el) return;
 
+  // LANDING PAGE: usa campos gravados diretamente em lp_leads
+  if (lead.origemSistema === 'landing') {
+    preencherIntelLanding(lead, el);
+    return;
+  }
+
+  // CALCULADORA: fluxo original intacto
   const scoreFirestore = lead.score != null ? Number(lead.score) : null;
   const tempLabel = lead.temperatura || 'Fria';
 
