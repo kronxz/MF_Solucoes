@@ -66,12 +66,12 @@ function mostrarPagina(pageId) {
 
   // Renderiza gráfico ao abrir stats (Chart.js precisa de elemento visível)
   if (pageId === 'statsPage') {
-    renderizarStatsKits(leads);
-    renderizarGraficoLeads(leads);
+    renderizarStatsKits([...leads, ...landingLeads]);
+    renderizarGraficoLeads([...leads, ...landingLeads]);
   }
-  if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm);
+  if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm, landingLeads);
   if (pageId === 'visitasPage') renderizarVisitas(eventos);
-  if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
+  if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
   if (pageId === 'leadsPage') {
     const leadsUnificados = [...leads, ...landingLeads];
     renderizarKanban(leadsUnificados);
@@ -121,7 +121,7 @@ function atualizarTudo() {
     console.log('[UNIFICADO] renderizarKanban com', leadsUnificados.length, 'leads');
     renderizarKanban(leadsUnificados);
   }
-  if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
+  if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
   atualizarLeadsLixeira([...leads, ...landingLeads]);
@@ -134,12 +134,12 @@ function atualizarTudo() {
   // Stats (somente se página visível)
   const statsAtiva = document.getElementById('statsPage')?.classList.contains('active');
   if (statsAtiva) {
-    renderizarStatsKits(leads);
-    renderizarGraficoLeads(leads);
+    renderizarStatsKits([...leads, ...landingLeads]);
+    renderizarGraficoLeads([...leads, ...landingLeads]);
   }
 
   const analyticsAtiva = document.getElementById('analyticsPage')?.classList.contains('active');
-  if (analyticsAtiva) renderizarAnalytics(eventos, leads, eventosSyncEm);
+  if (analyticsAtiva) renderizarAnalytics(eventos, leads, eventosSyncEm, landingLeads);
 
   const visitasAtiva = document.getElementById('visitasPage')?.classList.contains('active');
   if (visitasAtiva) renderizarVisitas(eventos);

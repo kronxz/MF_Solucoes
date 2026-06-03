@@ -32,12 +32,12 @@ export function iniciarAnalytics() {
 }
 
 // ─── RESUMO EXECUTIVO ────────────────────────────────────────
-export function renderizarAnalytics(eventos, leads = [], updatedAt = null) {
-  const ativos = (leads || []).filter(l => !l.deletado);
+export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landingLeads = []) {
+  const ativos = [...(leads||[]), ...(landingLeads||[])].filter(l => !l.deletado);
   const fechados = ativos.filter(l => String(l.status || '').toLowerCase() === 'fechado');
   const taxaConversao = ativos.length ? ((fechados.length / ativos.length) * 100).toFixed(0) : 0;
 
-  // Single-pass aggregation for events to reduce allocations
+  // Single-pass aggregation for events (calculadora) to reduce allocations
   const sessions = new Set();
   let totalSimulacoes = 0, totalWhatsapp = 0, totalPropostas = 0, totalScrolls = 0, totalTelefones = 0;
   (eventos || []).forEach(e => {
@@ -49,6 +49,16 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null) {
     else if (ev === 'scroll_profundo') totalScrolls += 1;
     else if (ev === 'telefone_digitado') totalTelefones += 1;
   });
+
+  // Métricas landing (campos gravados em lp_leads)
+  (landingLeads || []).filter(l => !l.deletado).forEach(l => {
+    if (l.sessionId) sessions.add(l.sessionId);
+    totalWhatsapp  += Number(l.cliquesWhatsapp) || 0;
+    totalTelefones += l.digitouTelefone === true ? 1 : 0;
+    totalScrolls   += (l.scrollMaximoPercentual || 0) >= 50 ? 1 : 0;
+    if (String(l.status || '').toLowerCase() === 'proposta') totalPropostas += 1;
+  });
+
   const totalVisitas = sessions.size;
 
   const el = document.getElementById('analyticsResumo');

@@ -241,6 +241,7 @@ function preencherIntelLanding(lead, el) {
   <div style="font-size:18px;margin-bottom:16px">🎯 Score: <b>${score}/100</b></div>
   <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
   <p>⏱ <b>Tempo na página:</b> ${esc(tempoStr)}</p>
+  <p>⏳ <b>Ficou +40s:</b> ${tempo > 40 ? 'Sim' : 'Não'}</p>
   <p>📜 <b>Scroll máximo:</b> ${lead.scrollMaximoPercentual != null ? esc(String(lead.scrollMaximoPercentual)) + '%' : '—'}</p>
   <p>💬 <b>Cliques WhatsApp:</b> ${esc(String(lead.cliquesWhatsapp || 0))}</p>
   <p>👤 <b>Digitou nome:</b> ${lead.digitouNome ? 'Sim' : 'Não'}</p>

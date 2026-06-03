@@ -7,8 +7,8 @@ import {
 import { formatBRL, parseDataFirestore } from './crm-utils.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
-export function atualizarMetricas(leads) {
-  const ativos = leads.filter(l => !l.deletado);
+export function atualizarMetricas(leads, landingLeads) {
+  const ativos = [...(leads||[]), ...(landingLeads||[])].filter(l => !l.deletado);
   const total = ativos.length;
 
   const negociacao = ativos.filter(l => {
@@ -31,7 +31,7 @@ export function atualizarMetricas(leads) {
 }
 
 // ─── STATS DE TRÁFEGO (Visitas / Leads por período) ───────────
-export function atualizarTrafico(leads, eventos) {
+export function atualizarTrafico(leads, eventos, landingLeads) {
   const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
   const inicioSemana = new Date(hoje); inicioSemana.setDate(hoje.getDate() - hoje.getDay());
   const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
@@ -50,9 +50,20 @@ export function atualizarTrafico(leads, eventos) {
     if (d >= inicioAno) visitasSet.ano.add(e.sessionId);
   });
 
-  // Leads por período
+  // Visitas landing: sessionId único por período
+  (landingLeads || []).forEach(l => {
+    if (l.deletado || !l.sessionId) return;
+    const d = parseDataFirestore(l.createdAt);
+    if (!d) return;
+    if (d >= hoje) visitasSet.hoje.add(l.sessionId);
+    if (d >= inicioSemana) visitasSet.semana.add(l.sessionId);
+    if (d >= inicioMes) visitasSet.mes.add(l.sessionId);
+    if (d >= inicioAno) visitasSet.ano.add(l.sessionId);
+  });
+
+  // Leads por período (calculadora + landing)
   let leadsHoje = 0, leadsSemana = 0, leadsMes = 0, leadsAno = 0;
-  (leads || []).forEach(l => {
+  [...(leads || []), ...(landingLeads || [])].forEach(l => {
     if (l.deletado) return;
     const d = parseDataFirestore(l.data || l.createdAt || l.criadoEm);
     if (!d) return;
@@ -76,16 +87,28 @@ export function atualizarTrafico(leads, eventos) {
 }
 
 // ─── ANALYTICS MINI GRID NO DASHBOARD ─────────────────────────
-export function atualizarAnalyticsMini(eventos) {
-  const visitas = new Set(
+export function atualizarAnalyticsMini(eventos, landingLeads) {
+  const visitasCalc = new Set(
     (eventos || []).filter(e => e.evento === 'pagina_abriu').map(e => e.sessionId)
-  ).size;
+  );
+  (landingLeads || []).filter(l => !l.deletado && l.sessionId).forEach(l => visitasCalc.add(l.sessionId));
+  const visitas = visitasCalc.size;
 
-  const scrolls = (eventos || []).filter(e => e.evento === 'scroll_profundo').length;
+  const scrollsCalc = (eventos || []).filter(e => e.evento === 'scroll_profundo').length;
+  const scrollsLanding = (landingLeads || []).filter(l => !l.deletado && (l.scrollMaximoPercentual || 0) >= 50).length;
+  const scrolls = scrollsCalc + scrollsLanding;
+
   const simulacoes = (eventos || []).filter(e => e.evento === 'clicou_simular').length;
-  const telefones = (eventos || []).filter(e => e.evento === 'telefone_digitado').length;
+
+  const telefonesCalc = (eventos || []).filter(e => e.evento === 'telefone_digitado').length;
+  const telefonesLanding = (landingLeads || []).filter(l => !l.deletado && l.digitouTelefone === true).length;
+  const telefones = telefonesCalc + telefonesLanding;
+
   const propostas = (eventos || []).filter(e => e.evento === 'gerou_proposta').length;
-  const whatsapp = (eventos || []).filter(e => e.evento === 'clicou_whatsapp').length;
+
+  const whatsappCalc = (eventos || []).filter(e => e.evento === 'clicou_whatsapp').length;
+  const whatsappLanding = (landingLeads || []).reduce((acc, l) => acc + (l.deletado ? 0 : (Number(l.cliquesWhatsapp) || 0)), 0);
+  const whatsapp = whatsappCalc + whatsappLanding;
 
   const el = document.getElementById('analytics');
   if (!el) return;
@@ -103,11 +126,11 @@ export function atualizarAnalyticsMini(eventos) {
 
 }
 
-export function atualizarDashboardCompleto(leads, eventos) {
-  atualizarMetricas(leads);
-  atualizarTrafico(leads, eventos);
-  atualizarAnalyticsMini(eventos);
-  atualizarOrigensLeads(leads);
+export function atualizarDashboardCompleto(leads, eventos, landingLeads) {
+  atualizarMetricas(leads, landingLeads);
+  atualizarTrafico(leads, eventos, landingLeads);
+  atualizarAnalyticsMini(eventos, landingLeads);
+  atualizarOrigensLeads([...(leads||[]), ...(landingLeads||[])]);
 }
 
 /** Top origens e campanhas (leads ativos) */
