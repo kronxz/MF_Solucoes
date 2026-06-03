@@ -383,7 +383,74 @@ body {
   box-sizing: border-box;
 }
 
-/* ── Leads Landing SPA cards ── */
+/* ── Leads Landing SPA — layout ── */
+.ll-spa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  padding: 1rem 1.5rem;
+  background: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.ll-spa-titulo {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.ll-spa-badge-novos {
+  background: #22c55e22;
+  color: #22c55e;
+  border: 1px solid #22c55e44;
+  border-radius: 20px;
+  padding: .2rem .7rem;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.ll-spa-tabs { display: flex; gap: .5rem; }
+.ll-spa-tab {
+  padding: .4rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  transition: all .15s;
+}
+.ll-spa-tab.ll-tab-ativa {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.ll-spa-badge-lixeira {
+  display: inline-block;
+  background: #ef444433;
+  color: #ef4444;
+  border-radius: 10px;
+  padding: 0 .4rem;
+  font-size: .75rem;
+  font-weight: 700;
+  margin-left: .25rem;
+}
+.ll-spa-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+}
+.ll-spa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+/* ── Cards ── */
 .ll-spa-card {
   background: #0f172a;
   border: 1px solid rgba(255,255,255,0.08);
@@ -411,23 +478,138 @@ body {
   color: #64748b;
   margin-top: .25rem;
 }
-.ll-spa-wpp {
-  display: inline-block;
+.ll-spa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
   margin-top: .5rem;
-  padding: .35rem .9rem;
-  background: #16a34a;
-  color: #fff;
-  border-radius: 8px;
-  text-decoration: none;
-  font-size: .82rem;
-  font-weight: 600;
-  width: fit-content;
 }
-.ll-spa-wpp:hover { background: #15803d; }
+.ll-spa-btn {
+  padding: .32rem .75rem;
+  border-radius: 7px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  display: inline-block;
+  transition: opacity .15s;
+}
+.ll-spa-btn:hover { opacity: .85; }
+.ll-spa-btn--wpp    { background: #16a34a; color: #fff; }
+.ll-spa-btn--detail { background: #2563eb; color: #fff; }
+.ll-spa-btn--del    { background: #ef444422; color: #ef4444; border: 1px solid #ef444444; }
+.ll-spa-btn--restore{ background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; }
+.ll-spa-btn--kit    { background: #22c55e; color: #fff; margin-top: .5rem; width: 100%; text-align: center; }
+.ll-spa-btn--proposta {
+  display: block;
+  margin-top: 1rem;
+  padding: .6rem 1.5rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+.ll-spa-btn--proposta:disabled { opacity: .4; cursor: not-allowed; }
 .ll-spa-empty {
   color: #64748b;
   font-size: .9rem;
   grid-column: 1 / -1;
   text-align: center;
   padding: 2rem;
+}
+
+/* ── Modal ── */
+.ll-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.ll-modal-box {
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.ll-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 1;
+}
+.ll-modal-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.ll-modal-fechar {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: .25rem .5rem;
+  border-radius: 6px;
+}
+.ll-modal-fechar:hover { background: rgba(255,255,255,0.07); }
+.ll-modal-body { padding: 1.25rem 1.5rem; }
+.ll-modal-tabela { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.ll-modal-tabela tr { border-bottom: 1px solid rgba(255,255,255,0.05); }
+.ll-modal-tabela td { padding: .45rem .5rem; color: #cbd5e1; }
+.ll-modal-label { color: #64748b; white-space: nowrap; padding-right: 1rem; width: 35%; }
+
+/* ── Kits ── */
+.ll-kits-section { margin-top: 1.5rem; }
+.ll-kits-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 1rem;
+}
+.ll-kits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: .75rem;
+}
+.ll-kit-card {
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: .9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.ll-kit-card.ll-kit--destaque {
+  border-color: #22c55e66;
+  background: #052e16;
+}
+.ll-kit-nome {
+  font-size: .9rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: .3rem;
+}
+.ll-kit-row {
+  font-size: .8rem;
+  color: #94a3b8;
 }
