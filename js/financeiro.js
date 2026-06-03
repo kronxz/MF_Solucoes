@@ -21,7 +21,7 @@ if(graficoExistente){
   Number(dados.economiaMensal || 0)
 
   const contaComSistema =
-  valorConta - economia
+  Math.max(valorConta - economia, 100)
 
   const valorSemSistema =
   Math.round(valorConta)
@@ -29,7 +29,7 @@ if(graficoExistente){
   const valorComSistema =
   Math.max(
   Math.round(contaComSistema),
-  250
+  100
 )
   
   const meses = [
@@ -167,13 +167,13 @@ export function preencherProjecaoFinanceira(dados){
   if(!container) return
 
   const valorAtual =
-  Number(dados.valor || 0)
+  Number(dados.valorConta || 0)
 
   const economia =
   Number(dados.economia || 0)
 
   const valorComSistema =
-  Math.max(valorAtual - economia, 180)
+  Math.max(valorAtual - economia, 100.00)
 
   let html = ""
 
@@ -218,11 +218,14 @@ export function preencherAnaliseFinanceira(dados){
 const valorAtual =
 Number(dados.valorConta || 0)
 
-const economia =
+const economiaOriginal =
 Number(dados.economia || 0)
 
 const valorComSistema =
-Math.max(valorAtual - economia, 130)
+Math.max(valorAtual - economiaOriginal, 100.00)
+
+const economia =
+valorAtual - valorComSistema
 
   document.getElementById("semSistema").innerText =
 `R$ ${valorAtual.toFixed(2)}/mês`
