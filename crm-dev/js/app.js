@@ -250,24 +250,24 @@ function iniciarRealtimeLanding() {
   unsubscribeLanding = onSnapshot(q, snap => {
     landingLeads = snap.docs.map(d => {
       const data = d.data();
-      return {
-        id:          d.id,
-        origemTipo:  'landing',
-        origemLabel: 'LANDING PAGE',
-        // campos obrigatórios para o Kanban
-        nome:        data.nome        || '(sem nome)',
-        telefone:    data.telefone    || '',
-        valor:       data.valorConta  || '',
-        status:      data.status && data.status !== 'excluido' ? data.status : (data.status === 'excluido' ? data.status : 'novo'),
-        deletado:    data.status === 'excluido' || data.deletado || false,
-        createdAt:   data.createdAt   || new Date().toISOString(),
-        // preserva todos os campos originais
+      const lead = {
+        // defaults para campos que o Kanban espera
+        nome:      data.nome      || '(sem nome)',
+        telefone:  data.telefone  || '',
+        valor:     data.valorConta || '',
+        status:    (data.status && data.status !== 'excluido') ? data.status : 'novo',
+        deletado:  data.status === 'excluido' || data.deletado || false,
+        createdAt: data.createdAt || new Date().toISOString(),
+        // dados originais (podem sobrescrever defaults)
         ...data,
-        // garante que id e origemTipo não sejam sobrescritos por ...data
-        id:          d.id,
-        origemTipo:  'landing',
-        origemLabel: 'LANDING PAGE',
+        // campos de identidade — SEMPRE ao final para não serem sobrescritos por ...data
+        id:            d.id,
+        origemSistema: 'landing',
+        origemTipo:    'landing',
+        origemLabel:   'LANDING PAGE',
       };
+      console.log('[LANDING_SOURCE]', d.id, lead.origemSistema);
+      return lead;
     });
 
     console.log('[LANDING] landingLeads.length:', landingLeads.length);
