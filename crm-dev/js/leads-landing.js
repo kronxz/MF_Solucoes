@@ -1,11 +1,18 @@
 /**
  * Leads Landing — MF CRM
- * Lê exclusivamente lp_leads do projeto mf-solucoes-crm (PROD)
- * NÃO toca na coleção "leads" nem em nenhum outro módulo do CRM
+ * Auth + Firestore via mf-solucoes-crm (PROD)
+ * Isola completamente da coleção "leads" e do CRM DEV
  */
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+    getFirestore, collection, query, orderBy,
+    onSnapshot, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+/* ── Config PROD (mf-solucoes-crm) ── */
 const PROD_CONFIG = {
     apiKey:            "AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU",
     authDomain:        "mf-solucoes-crm.firebaseapp.com",
@@ -22,53 +29,66 @@ const STATUS_LABEL = {
     fechado:  { label: 'Fechado',  color: '#22c55e' },
     perdido:  { label: 'Perdido',  color: '#ef4444' }
 };
-
 const STATUSES = ['novo', 'contato', 'proposta', 'fechado', 'perdido'];
 
+let db, auth;
+let leadsCache = [];
+let unsubscribe = null;
+
+/* ── Escape HTML ── */
 function esc(v) {
     if (v == null || v === '') return '—';
     return String(v)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function formatData(iso) {
     if (!iso) return '—';
     try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; }
 }
 
 /* ── Firebase init ── */
-let db;
-function initDb() {
-    const existing = getApps().find(a => a.name === 'lp-prod');
-    const app = existing || initializeApp(PROD_CONFIG, 'lp-prod');
-    db = getFirestore(app);
+function initFirebase() {
+    const ex = getApps().find(a => a.name === 'lp-prod');
+    const app = ex || initializeApp(PROD_CONFIG, 'lp-prod');
+    db   = getFirestore(app);
+    auth = getAuth(app);
 }
 
-/* ── Cache para o modal ── */
-let leadsCache = [];
+/* ── Login / Logout ── */
+async function fazerLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('ll-email').value.trim();
+    const senha = document.getElementById('ll-senha').value;
+    const erroEl = document.getElementById('ll-login-erro');
+    erroEl.textContent = '';
+    try {
+        await signInWithEmailAndPassword(auth, email, senha);
+    } catch(err) {
+        erroEl.textContent = 'E-mail ou senha incorretos.';
+    }
+}
+
+function fazerLogout() {
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    signOut(auth);
+}
 
 /* ── Renderização ── */
 function renderCards(leads) {
-    const colNovos   = document.getElementById('col-novos');
-    const colTodos   = document.getElementById('col-todos');
-    const cntNovos   = document.getElementById('counter-novos');
-    const cntTodos   = document.getElementById('counter-todos');
-
+    const tabAtiva = document.querySelector('.ll-tab.active')?.dataset.col || 'col-novos';
     const novos = leads.filter(l => (l.status || 'novo') === 'novo');
 
-    cntNovos.textContent = novos.length;
-    cntTodos.textContent = leads.length;
+    document.getElementById('counter-novos').textContent = novos.length;
+    document.getElementById('counter-todos').textContent = leads.length;
 
-    colNovos.innerHTML = novos.length
-        ? novos.map(cardHTML).join('')
-        : '<p class="ll-empty">Não existem leads da Landing Page.</p>';
-
-    colTodos.innerHTML = leads.length
-        ? leads.map(cardHTML).join('')
-        : '<p class="ll-empty">Não existem leads da Landing Page.</p>';
+    const renderLista = (col, lista) => {
+        document.getElementById(col).innerHTML = lista.length
+            ? lista.map(cardHTML).join('')
+            : '<p class="ll-empty">Não existem leads da Landing Page.</p>';
+    };
+    renderLista('col-novos', novos);
+    renderLista('col-todos', leads);
 }
 
 function cardHTML(lead) {
@@ -84,19 +104,20 @@ function cardHTML(lead) {
       <div class="ll-card-row">📱 ${esc(lead.telefone)}</div>
       <div class="ll-card-row">💡 ${esc(lead.valorConta)}</div>
       <div class="ll-card-row">🔗 ${esc(lead.origem)}</div>
+      <div class="ll-card-row muted">${esc(lead.utm_source || '')} ${lead.utm_source && lead.utm_campaign ? '·' : ''} ${esc(lead.utm_campaign || '')}</div>
       <div class="ll-card-actions">
         <a class="ll-btn ll-btn-wpp" href="https://wa.me/55${esc(wpp)}" target="_blank" rel="noopener noreferrer">💬 WhatsApp</a>
         <button class="ll-btn ll-btn-detail" data-id="${esc(lead.id)}">🔍 Detalhes</button>
       </div>
       <div class="ll-status-row">
         <select class="ll-select" data-id="${esc(lead.id)}">
-          ${STATUSES.map(s => `<option value="${s}"${lead.status===s?' selected':''}>${STATUS_LABEL[s].label}</option>`).join('')}
+          ${STATUSES.map(s=>`<option value="${s}"${lead.status===s?' selected':''}>${STATUS_LABEL[s].label}</option>`).join('')}
         </select>
       </div>
     </div>`;
 }
 
-/* ── Modal ── */
+/* ── Modal detalhes ── */
 function abrirModal(lead) {
     const tbody = document.getElementById('ll-modal-body');
     tbody.innerHTML = '';
@@ -115,55 +136,55 @@ function abrirModal(lead) {
         ['Session ID',   lead.sessionId],
         ['Criado em',    formatData(lead.createdAt)],
     ].forEach(([label, val]) => {
-        const tr  = document.createElement('tr');
-        const td1 = document.createElement('td');
-        const td2 = document.createElement('td');
+        const tr=document.createElement('tr'),
+              td1=document.createElement('td'),
+              td2=document.createElement('td');
         td1.textContent = label;
         td2.textContent = (val != null && val !== '') ? val : '—';
-        tr.appendChild(td1);
-        tr.appendChild(td2);
+        tr.appendChild(td1); tr.appendChild(td2);
         tbody.appendChild(tr);
     });
     document.getElementById('ll-modal').style.display = 'flex';
 }
 
 async function atualizarStatus(id, novoStatus) {
-    try {
-        await updateDoc(doc(db, 'lp_leads', id), { status: novoStatus });
-    } catch(e) {
-        console.error('[lp_leads] update:', e.message);
-    }
+    try { await updateDoc(doc(db, 'lp_leads', id), { status: novoStatus }); }
+    catch(e) { console.error('[lp_leads] update:', e.message); }
 }
 
 /* ── Listener Firestore ── */
 function iniciarListener() {
+    if (unsubscribe) unsubscribe();
     const q = query(collection(db, 'lp_leads'), orderBy('createdAt', 'desc'));
-    onSnapshot(q, snap => {
+    unsubscribe = onSnapshot(q, snap => {
         leadsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderCards(leadsCache);
         document.getElementById('ll-loading').style.display = 'none';
     }, err => {
-        console.error('[lp_leads]', err.message);
-        document.getElementById('ll-loading').textContent = 'Erro ao carregar leads: ' + err.message;
+        document.getElementById('ll-loading').textContent = 'Erro: ' + err.message;
     });
 }
 
-/* ── Event delegation ── */
+/* ── Setup events ── */
 function setupEvents() {
+    document.getElementById('ll-login-form').addEventListener('submit', fazerLogin);
+    document.getElementById('ll-logout-btn').addEventListener('click', fazerLogout);
+
     document.body.addEventListener('click', e => {
         const btn = e.target.closest('.ll-btn-detail');
         if (btn) {
             const lead = leadsCache.find(l => l.id === btn.dataset.id);
             if (lead) abrirModal(lead);
         }
-        if (e.target.closest('#ll-modal-close-btn') || e.target.id === 'll-modal') {
+        if (e.target.closest('#ll-modal-close-btn') || e.target.id === 'll-modal')
             document.getElementById('ll-modal').style.display = 'none';
-        }
     });
+
     document.body.addEventListener('change', e => {
         const sel = e.target.closest('.ll-select');
         if (sel) atualizarStatus(sel.dataset.id, sel.value);
     });
+
     document.querySelectorAll('.ll-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.ll-tab').forEach(b => b.classList.remove('active'));
@@ -174,9 +195,29 @@ function setupEvents() {
     });
 }
 
-/* ── Init ── */
+/* ── Auth state ── */
+function setupAuth() {
+    const loginScreen = document.getElementById('ll-login-screen');
+    const mainScreen  = document.getElementById('ll-main-screen');
+
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            document.getElementById('ll-user-email').textContent = user.email;
+            loginScreen.style.display = 'none';
+            mainScreen.style.display  = 'block';
+            iniciarListener();
+        } else {
+            if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+            loginScreen.style.display = 'flex';
+            mainScreen.style.display  = 'none';
+            document.getElementById('ll-loading').style.display = 'block';
+            document.getElementById('ll-loading').textContent   = 'Carregando leads...';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    initDb();
+    initFirebase();
     setupEvents();
-    iniciarListener();
+    setupAuth();
 });
