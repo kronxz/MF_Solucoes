@@ -84,12 +84,28 @@ export function renderHtmlKitResumo(lead, esc) {
   const inv = Number(lead.investimento || 0);
   const tag = estimado ? ' <small style="color:#f59e0b">(estimado)</small>' : '';
 
-  const cards = Object.entries(kits).map(([, kit]) => `
-<div class="glass-card" style="padding:12px;margin-bottom:8px;font-size:13px">
+  const isLanding = lead.origemSistema === 'landing';
+  const kitAtual  = lead.kitSelecionado || lead.kitEscolhido || '';
+
+  const cards = Object.entries(kits).map(([, kit]) => {
+    const selecionado = kitAtual && (kit.nome || '').includes(kitAtual.replace(' ⭐',''));
+    const btnSelect = isLanding
+      ? `<button
+           class="btn-select-kit-crm${selecionado ? ' btn-select-kit-crm--ativo' : ''}"
+           data-lead-id="${lead.id}"
+           data-kit='${JSON.stringify(kit).replace(/'/g,"&#39;")}'
+           style="margin-top:6px;padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${selecionado?'#22c55e':'#2563eb'};color:#fff">
+           ${selecionado ? '✅ Selecionado' : '▶ Selecionar'}
+         </button>`
+      : '';
+    return `
+<div class="glass-card" style="padding:12px;margin-bottom:8px;font-size:13px${selecionado?';border:1px solid #22c55e':''}}">
   <b style="color:var(--verde-acento)">${esc(kit.nome)}</b>
   <p style="margin:6px 0 0">📦 ${kit.kwp} kWp · 🧩 ${kit.placas} placas · ⚡ ${kit.geracao} kWh/mês</p>
   <p style="margin:4px 0 0">💰 R$ ${Number(kit.investimento).toLocaleString('pt-BR')} · 💸 R$ ${kit.economia}/mês · ⏳ ${kit.payback}a</p>
-</div>`).join('');
+  ${btnSelect}
+</div>`;
+  }).join('');
 
   return `
 <h3 style="margin:16px 0 8px;font-size:15px">🏷️ Kit selecionado</h3>

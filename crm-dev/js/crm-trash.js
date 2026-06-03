@@ -2,8 +2,28 @@
  * crm-trash.js — Lixeira: busca, restaurar, excluir permanente
  */
 
-import { collection, doc, getDocs, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, doc, getDocs, updateDoc, deleteDoc, getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { toast, escHtml } from './crm-utils.js';
+
+const PROD_CONFIG = {
+  apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
+  authDomain:        'mf-solucoes-crm.firebaseapp.com',
+  projectId:         'mf-solucoes-crm',
+  storageBucket:     'mf-solucoes-crm.firebasestorage.app',
+  messagingSenderId: '492242482187',
+  appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
+};
+
+function getProdDb() {
+  const app = getApps().find(a => a.name === 'lp-prod') || initializeApp(PROD_CONFIG, 'lp-prod');
+  return getFirestore(app);
+}
+
+function getLeadSource(lead) {
+  if (lead?.origemSistema === 'landing') return { db: getProdDb(), col: 'lp_leads' };
+  return { db: _db, col: 'leads' };
+}
 
 let _db = null;
 let _leads = [];
@@ -18,8 +38,16 @@ function formatarData(dataISO) {
 
 async function carregarLeadsLixeira() {
   if (!_db) return;
-  const snapshot = await getDocs(collection(_db, 'leads'));
-  _leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const [snapCalc, snapLanding] = await Promise.all([
+    getDocs(collection(_db, 'leads')),
+    getDocs(collection(getProdDb(), 'lp_leads')).catch(() => ({ docs: [] }))
+  ]);
+  const calc    = snapCalc.docs.map(d => ({ id: d.id, origemSistema: 'calculadora', ...d.data() }));
+  const landing = snapLanding.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, origemSistema: 'landing', ...data, deletado: data.status === 'excluido' || data.deletado || false };
+  });
+  _leads = [...calc, ...landing];
 }
 
 export function iniciarLixeira(db) {
@@ -123,17 +151,14 @@ async function restaurarLead(id) {
     toast('Erro interno ao restaurar lead', 'error');
     return;
   }
-
+  const lead = _leads.find(l => l.id === id);
+  const { db: leadDb, col } = getLeadSource(lead);
+  const payload = lead?.origemSistema === 'landing'
+    ? { status: 'novo', deletado: false, restauradoEm: new Date().toISOString() }
+    : { deletado: false, restauradoEm: new Date().toISOString() };
   try {
-    await updateDoc(doc(_db, 'leads', id), {
-      deletado: false,
-      restauradoEm: new Date().toISOString()
-    });
-    const lead = _leads.find(l => l.id === id);
-    if (lead) {
-      lead.deletado = false;
-      lead.restauradoEm = new Date().toISOString();
-    }
+    await updateDoc(doc(leadDb, col, id), payload);
+    if (lead) { lead.deletado = false; lead.restauradoEm = new Date().toISOString(); }
     renderLixeira();
     toast('Lead restaurado', 'success');
   } catch (e) {

@@ -8,7 +8,7 @@ import {
   onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-  collection, query, where, orderBy, limit, onSnapshot, getFirestore
+  collection, query, where, orderBy, limit, onSnapshot, getFirestore, doc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { LEADS_LIMIT } from './crm-config.js';
@@ -124,7 +124,7 @@ function atualizarTudo() {
   if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
-  atualizarLeadsLixeira(leads);
+  atualizarLeadsLixeira([...leads, ...landingLeads]);
   atualizarLeadsDetails([...leads, ...landingLeads]);
 
   // Sincroniza dados técnicos e financeiros
@@ -380,11 +380,62 @@ async function bootstrapApp() {
   iniciarNavegacao();
   iniciarLixeira(db);
   iniciarDetails(db);
+
+  // Handler de seleção de kit para leads landing no modalDetalhes
+  document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-select-kit-crm');
+    if (!btn) return;
+    const lead = window._crmLeadAberto;
+    if (!lead || lead.origemSistema !== 'landing') return;
+
+    const kit = JSON.parse(btn.dataset.kit);
+    const { db: leadDb } = (() => {
+      const prodApp = getApps().find(a => a.name === 'lp-prod');
+      const d = prodApp ? getFirestore(prodApp) : null;
+      return { db: d };
+    })();
+    if (!leadDb) return;
+
+    await updateDoc(doc(leadDb, 'lp_leads', lead.id), {
+      kitSelecionado:    kit.nome,
+      potenciaSistema:   kit.kwp,
+      quantidadePlacas:  kit.placas,
+      potenciaPlaca:     kit.potenciaPlaca || 580,
+      inversor:          kit.inversor || '',
+      economiaMensal:    kit.economia,
+      investimento:      kit.investimento,
+      payback:           kit.payback,
+      // campos que crm-proposal.js lê
+      kwp:               kit.kwp,
+      placas:            kit.placas,
+      geracao:           kit.geracao,
+      economia:          kit.economia,
+      kitEscolhido:      kit.nome,
+      sistema:           kit.nome,
+    });
+
+    // Habilita botão Proposta
+    const btnProposta = document.getElementById('btnPropostaModal');
+    if (btnProposta) btnProposta.disabled = false;
+
+    // Atualiza lead em memória
+    Object.assign(lead, { kitSelecionado: kit.nome, kitEscolhido: kit.nome, sistema: kit.nome,
+      kwp: kit.kwp, placas: kit.placas, geracao: kit.geracao, economia: kit.economia,
+      investimento: kit.investimento, payback: kit.payback, inversor: kit.inversor || '' });
+
+    // Re-abre modal para refletir kit selecionado
+    window._crmLeadAberto = lead;
+    abrirDetalhes(lead.id);
+  });
   iniciarAnalytics();
   iniciarInstalacoesPage();
 
   // Kanban: callback para abrir detalhes
-  iniciarKanban(db, (leadId) => abrirDetalhes(leadId));
+  iniciarKanban(db, (leadId) => {
+    // Armazena o lead atual (usado pelo handler de kit selection abaixo)
+    window._crmLeadAberto = [...leads, ...landingLeads].find(l => l.id === leadId) || null;
+    abrirDetalhes(leadId);
+  });
 
   // Página inicial padrão
   mostrarPagina('dashboardPage');

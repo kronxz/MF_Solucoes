@@ -93,23 +93,11 @@ function cardHTML(lead) {
 
 function renderizar() {
   const grid    = document.getElementById('llspa-grid');
-  const counter = document.getElementById('llspa-counter');
   const loading = document.getElementById('llspa-loading');
   if (!grid) return;
   if (loading) loading.style.display = 'none';
-
-  const novos    = _cache.filter(l => (l.status || 'novo') === 'novo');
-  const lixeira  = _cache.filter(l => l.status === 'excluido');
-  const lista    = _abaAtiva === 'novos' ? novos : lixeira;
-
-  if (counter) counter.textContent = novos.length;
-
-  const lixCounter = document.getElementById('llspa-lixeira-counter');
-  if (lixCounter) lixCounter.textContent = lixeira.length;
-
-  grid.innerHTML = lista.length
-    ? lista.map(cardHTML).join('')
-    : `<p class="ll-spa-empty">${_abaAtiva === 'novos' ? 'Nenhum lead novo da Landing Page.' : 'Lixeira vazia.'}</p>`;
+  // Leads landing agora aparecem na aba Leads principal do CRM.
+  grid.innerHTML = '<p class="ll-spa-empty">✅ Leads da Landing Page agora aparecem na aba <strong>Leads</strong> do CRM.</p>';
 }
 
 // ── Modal detalhes + kits ───────────────────────────────────
