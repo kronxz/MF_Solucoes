@@ -2,10 +2,23 @@
 // Handles: board render, card HTML, drag-and-drop, mover/voltar, excluir, whatsapp, proposta, fechar
 
 import {
-  doc, updateDoc, addDoc, collection, deleteDoc
+  doc, updateDoc, addDoc, collection, deleteDoc, getFirestore
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from '../firebase/config.js';
+
+// ─── HELPER DE ORIGEM ─────────────────────────────────────────
+function getLeadSource(lead) {
+  if (lead?.origemSistema === 'landing') {
+    const prodApp = getApps().find(a => a.name === 'lp-prod');
+    return {
+      db:         prodApp ? getFirestore(prodApp) : _db,
+      collection: 'lp_leads'
+    };
+  }
+  return { db: _db, collection: 'leads' };
+}
 import {
   crmCardIntel,
   toDateFromFirestore
@@ -267,9 +280,11 @@ export function iniciarKanban(db, onDetalhes) {
 
 // ─── AÇÕES DOS LEADS ──────────────────────────────────────────
 async function moverParaColuna(id, novoStatus) {
-  const ref = doc(_db, 'leads', id);
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=mover→${novoStatus}`);
+  const ref = doc(leadDb, col, id);
   const historico = lead.historico || [];
   historico.push({ acao: 'Movido para ' + novoStatus, data: new Date().toISOString() });
   await updateDoc(ref, {
@@ -299,8 +314,13 @@ async function voltarLead(id) {
 
 async function excluirLead(id) {
   if (!confirm('Mover lead para a lixeira?')) return;
-  const ref = doc(_db, 'leads', id);
-  await updateDoc(ref, { deletado: true, deletadoEm: new Date().toISOString() });
+  const lead = _leads.find(l => l.id === id);
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead?.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=excluir`);
+  const payload = lead?.origemSistema === 'landing'
+    ? { status: 'excluido', deletadoEm: new Date().toISOString() }
+    : { deletado: true, deletadoEm: new Date().toISOString() };
+  await updateDoc(doc(leadDb, col, id), payload);
   toast('Lead movido para lixeira', 'warn');
 }
 
@@ -316,7 +336,9 @@ async function fecharVenda(id) {
   if (sistema.includes('Premium')) est.premiumFechados = (est.premiumFechados || 0) + 1;
   localStorage.setItem('estatisticas', JSON.stringify(est));
 
-  await updateDoc(doc(_db, 'leads', id), { status: 'fechado' });
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead?.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=fecharVenda`);
+  await updateDoc(doc(leadDb, col, id), { status: 'fechado' });
   toast('🚀 Venda fechada!', 'success');
 }
 

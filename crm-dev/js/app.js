@@ -125,7 +125,7 @@ function atualizarTudo() {
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
   atualizarLeadsLixeira(leads);
-  atualizarLeadsDetails(leads);
+  atualizarLeadsDetails([...leads, ...landingLeads]);
 
   // Sincroniza dados técnicos e financeiros
   carregarDadosTecnico(leads, getInstalacoes());
@@ -195,7 +195,7 @@ function iniciarRealtimeLeads(userId) {
         if (change.type === 'added' || change.type === 'modified') {
           // [ACTIVE_APP_FILE] app.js — todos os leads passam para o kanban sem filtro aqui
           console.log('[APP_SNAPSHOT] lead recebido:', id, '| nome:', data.nome, '| createdAt:', !!data.createdAt, '| deletado:', data.deletado);
-          _leadsMap.set(id, data);
+          _leadsMap.set(id, { ...data, origemSistema: 'calculadora' });
         } else if (change.type === 'removed') {
           _leadsMap.delete(id);
         }
