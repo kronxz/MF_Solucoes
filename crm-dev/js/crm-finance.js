@@ -13,7 +13,11 @@ export function resolverKitsLead(lead) {
 }
 
 export function calcularKitsFallback(lead) {
-  const conta = parseFloat(lead?.valor || lead?.contaDeLuz) || 500;
+  const raw = lead?.valor || lead?.contaDeLuz || lead?.valorConta || '';
+  const stripped = String(raw).replace(/[^\d.,]/g, '');
+  const conta = (stripped.includes(',') && stripped.includes('.'))
+    ? parseFloat(stripped.replace(/\./g, '').replace(',', '.')) || 500
+    : parseFloat(stripped.replace(',', '.')) || 500;
   const tarifa = parseFloat(lead?.tarifa) || 0.95;
   const hsp = parseFloat(lead?.hsp) || 4.5;
   const potPlaca = parseFloat(lead?.potenciaPlaca) || 580;
