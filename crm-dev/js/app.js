@@ -29,6 +29,7 @@ import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarLista
 import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage, getTecnicoMap } from './crm-tecnico.js';
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
+import { iniciarLeadsLanding, renderizarLeadsLanding } from './crm-leads-landing.js';
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
 let leads = [];
@@ -82,6 +83,7 @@ function mostrarPagina(pageId) {
   if (pageId === 'notificacoesPage') {
     renderizarNotificacoesPage();
   }
+  if (pageId === 'leadsLandingPage') renderizarLeadsLanding();
 }
 
 function iniciarNavegacao() {
@@ -281,6 +283,7 @@ onAuthStateChanged(auth, async (user) => {
   initTecnico(db);
   initFinanceiro(db);
   initNotificacoes(db);
+  iniciarLeadsLanding();
   carregarInstalacoes(() => {
     if (document.getElementById('instalacoesPage')?.classList.contains('active')) {
       renderizarListaInstalacoes('instalacoesLista');

@@ -382,3 +382,52 @@ body {
   resize: vertical;
   box-sizing: border-box;
 }
+
+/* ── Leads Landing SPA cards ── */
+.ll-spa-card {
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+.ll-spa-nome {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: .2rem;
+}
+.ll-spa-row {
+  font-size: .85rem;
+  color: #94a3b8;
+  display: flex;
+  gap: .4rem;
+}
+.ll-spa-row span { color: #cbd5e1; }
+.ll-spa-data {
+  font-size: .78rem;
+  color: #64748b;
+  margin-top: .25rem;
+}
+.ll-spa-wpp {
+  display: inline-block;
+  margin-top: .5rem;
+  padding: .35rem .9rem;
+  background: #16a34a;
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: .82rem;
+  font-weight: 600;
+  width: fit-content;
+}
+.ll-spa-wpp:hover { background: #15803d; }
+.ll-spa-empty {
+  color: #64748b;
+  font-size: .9rem;
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+}
