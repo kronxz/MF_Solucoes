@@ -165,7 +165,9 @@ async function excluirPermanentemente(id) {
   }
 
   try {
-    await deleteDoc(doc(_db, 'leads', id));
+    const lead = _leads.find(l => l.id === id);
+    const { db: leadDb, col } = getLeadSource(lead);
+    await deleteDoc(doc(leadDb, col, id));
     _leads = _leads.filter(l => l.id !== id);
     renderLixeira();
     toast('Lead excluído permanentemente', 'warn');

@@ -26,9 +26,9 @@ export function iniciarRealtimeEventos(db, userId, onUpdate, onError) {
   pararRealtimeEventos();
   if (!db || typeof onUpdate !== 'function') return null;
 
-  const eventosQuery = userId
-    ? query(collection(db, 'eventos'), where('userId', '==', userId), orderBy('criadoEm', 'desc'), limit(EVENTS_LIMIT))
-    : collection(db, 'eventos');
+  // Sem filtro de userId — eventos da landing são anônimos (sem userId).
+  // Todos os eventos do projeto são exibidos no CRM.
+  const eventosQuery = query(collection(db, 'eventos'), orderBy('criadoEm', 'desc'), limit(EVENTS_LIMIT));
 
   _unsub = onSnapshot(
     eventosQuery,

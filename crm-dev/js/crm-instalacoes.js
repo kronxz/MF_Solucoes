@@ -69,11 +69,15 @@ export function carregarLeadsMap(onUpdate) {
     onUpdate(_leadsMap);
   }
 
+  const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao','']);
+
   const unsubCalc = onSnapshot(collection(_db, 'leads'), (snapshot) => {
     _mapCalc = {};
     snapshot.docs.forEach(d => {
       const data = d.data();
-      if (data.deletado === true || data.status === 'excluido') return;
+      const st = String(data.status || '').toLowerCase();
+      if (data.deletado === true || st === 'excluido' || st === 'arquivado') return;
+      if (data.status && !STATUS_ATIVOS.has(st)) return;
       _mapCalc[d.id] = { id: d.id, origemSistema: 'calculadora', ...data };
     });
     merge();
@@ -83,7 +87,8 @@ export function carregarLeadsMap(onUpdate) {
     _mapLanding = {};
     snapshot.docs.forEach(d => {
       const data = d.data();
-      if (data.deletado === true || data.status === 'excluido') return;
+      const st = String(data.status || '').toLowerCase();
+      if (data.deletado === true || st === 'excluido' || st === 'arquivado') return;
       _mapLanding[d.id] = { id: d.id, origemSistema: 'landing', ...data };
     });
     merge();

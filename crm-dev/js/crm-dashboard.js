@@ -8,7 +8,7 @@ import { formatBRL, parseDataFirestore } from './crm-utils.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
 export function atualizarMetricas(leads) {
-  const ativos = leads.filter(l => !l.deletado);
+  const ativos = leads.filter(l => !l.deletado && l.status !== 'excluido' && l.status !== 'arquivado');
   const total = ativos.length;
 
   const negociacao = ativos.filter(l => {
