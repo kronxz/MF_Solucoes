@@ -73,6 +73,9 @@
       <button id="btn-analytics" class="sidebar-btn" data-page="analyticsPage">
         <span class="btn-icon">📈</span> Analytics
       </button>
+      <button id="btn-qrcodes" class="sidebar-btn" data-page="qrcodesPage">
+        <span class="btn-icon">📍</span> QR Codes
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -351,6 +354,22 @@
         <button id="btn-copiar-eventos" type="button" class="btn-primary" style="margin-top:10px; background:var(--verde-acento); color:#000">
           📋 Copiar para IA
         </button>
+      </div>
+    </section>
+
+    <!-- ─── QR CODES PAGE ─── -->
+    <section id="qrcodesPage" class="page" aria-label="QR Codes — Funil de Conversão">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <h1 style="margin:0">📍 QR Codes — Funil de Conversão</h1>
+        <button id="btn-refresh-qr" type="button" class="btn-primary" style="font-size:13px;padding:8px 16px">
+          🔄 Atualizar
+        </button>
+      </div>
+      <p style="color:#64748b;margin-top:0;margin-bottom:20px;font-size:13px">
+        Visitas rastreadas por QR Code físico · Sem formulário preenchido · Tempo real
+      </p>
+      <div id="qrcodesConteudo">
+        <p style="color:#64748b;text-align:center;padding:60px">Clique em <b>QR Codes</b> no menu para carregar as métricas.</p>
       </div>
     </section>
 

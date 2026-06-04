@@ -30,6 +30,7 @@ import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarLista
 import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage, getTecnicoMap } from './crm-tecnico.js';
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
+import { carregarQRCodes } from './crm-qrcodes.js';
 // crm-leads-landing.js — módulo SPA removido; lp_leads integrado ao Kanban principal via iniciarRealtimeLanding
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
@@ -88,6 +89,9 @@ function mostrarPagina(pageId) {
   }
   if (pageId === 'notificacoesPage') {
     renderizarNotificacoesPage();
+  }
+  if (pageId === 'qrcodesPage') {
+    carregarQRCodes();
   }
   // leadsLandingPage removido — leads landing aparecem na aba Leads principal
 }
@@ -429,6 +433,9 @@ async function bootstrapApp() {
   });
   iniciarAnalytics();
   iniciarInstalacoesPage();
+
+  // Botão de refresh na página QR Codes
+  document.getElementById('btn-refresh-qr')?.addEventListener('click', () => carregarQRCodes());
 
   // Kanban: callback para abrir detalhes
   iniciarKanban(db, (leadId) => {
