@@ -59,8 +59,10 @@ export function carregarLeadsMap(onUpdate) {
   const uid = getAuth(app).currentUser?.uid;
   if (!uid) return;
 
-  const q = query(collection(_db, 'leads'), where('userId', '==', uid));
-  return onSnapshot(q, (snapshot) => {
+  // Lê todos os leads da coleção — sem filtro de userId — para incluir
+  // leads da calculadora (com userId) e leads da landing page (sem userId).
+  // Deduplicação natural: cada documento tem id único no Firestore.
+  return onSnapshot(collection(_db, 'leads'), (snapshot) => {
     _leadsMap = {};
     snapshot.docs.forEach(doc => {
       _leadsMap[doc.id] = { id: doc.id, ...doc.data() };
