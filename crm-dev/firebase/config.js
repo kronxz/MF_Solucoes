@@ -25,11 +25,11 @@ const firebaseConfig = {
   measurementId: "G-QK81S43JLJ"
 };
 
-// Singleton pattern
+// Singleton pattern — usa mf-solucoes-crm (PROD)
 let app;
 if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log('FIREBASE APP (DEV):', app);
+    app = initializeApp(firebaseConfigProd);
+    console.log('FIREBASE APP (PROD):', app.options.projectId);
 } else {
     app = getApp(); // if already initialized, use that one
 }

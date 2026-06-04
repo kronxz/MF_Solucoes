@@ -238,19 +238,10 @@ function iniciarRealtimeLeads(userId) {
 function iniciarRealtimeLanding() {
   if (unsubscribeLanding) { unsubscribeLanding(); }
 
-  const PROD_CONFIG = {
-    apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
-    authDomain:        'mf-solucoes-crm.firebaseapp.com',
-    projectId:         'mf-solucoes-crm',
-    storageBucket:     'mf-solucoes-crm.firebasestorage.app',
-    messagingSenderId: '492242482187',
-    appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
-  };
-  const existingApp = getApps().find(a => a.name === 'lp-prod');
-  const prodApp     = existingApp || initializeApp(PROD_CONFIG, 'lp-prod');
-  const dbProd      = getFirestore(prodApp);
-
-  const q = query(collection(dbProd, 'lp_leads'), orderBy('createdAt', 'desc'));
+  // db agora aponta para mf-solucoes-crm (PROD) — usar diretamente
+  // O app secundário lp-prod era necessário quando config.js apontava para DEV.
+  // Com config.js corrigido para PROD, db já é mf-solucoes-crm e carrega auth do usuário.
+  const q = query(collection(db, 'lp_leads'), orderBy('createdAt', 'desc'));
 
   unsubscribeLanding = onSnapshot(q, snap => {
     landingLeads = snap.docs.map(d => {
