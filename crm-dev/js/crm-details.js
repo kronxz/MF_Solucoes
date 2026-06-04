@@ -3,10 +3,11 @@
 
 import {
   collection, query, where, getDocs, onSnapshot, orderBy, limit,
-  doc, updateDoc
+  doc, updateDoc, getFirestore
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { TIMELINE_LIMIT } from './crm-config.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { app } from '../firebase/config.js';
 import { abrirProposta } from './crm-proposal.js';
 import { toast, escHtml } from './crm-utils.js';
@@ -24,6 +25,18 @@ let _leads = [];
 let _unsubTimeline = null;
 let _leadAtualId = null;
 let _debounceObs = null;
+
+function getLeadDb(lead) {
+  if (lead?.origemSistema === 'landing') {
+    const prodApp = getApps().find(a => a.name === 'lp-prod');
+    return prodApp ? getFirestore(prodApp) : _db;
+  }
+  return _db;
+}
+
+function getLeadCollection(lead) {
+  return lead?.origemSistema === 'landing' ? 'lp_leads' : 'leads';
+}
 
 // ─── INIT ─────────────────────────────────────────────────────
 export function iniciarDetails(db) {
@@ -46,6 +59,19 @@ export function iniciarDetails(db) {
     const lead = _leads.find(l => l.id === _leadAtualId);
     if (abrirProposta(lead)) toast('Proposta aberta', 'info');
     else toast('Lead não encontrado', 'error');
+  });
+
+  // Edição de dados do lead — delegação no modal
+  document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
+    if (e.target.id === 'btnEditarLead') {
+      const lead = _leads.find(l => l.id === _leadAtualId);
+      if (lead) ativarModoEdicao(lead);
+    } else if (e.target.id === 'btnCancelarEdicao') {
+      const lead = _leads.find(l => l.id === _leadAtualId);
+      if (lead) preencherAbaLead(lead);
+    } else if (e.target.id === 'btnSalvarEdicao') {
+      await salvarEdicaoLead();
+    }
   });
 
   const obsBox = document.getElementById('detalhe-observacoes');
@@ -182,6 +208,9 @@ async function preencherAbaLead(lead) {
     const origemBg     = lead.origemSistema === 'landing' ? '#1e3a5f' : '#052e16';
     const origemBorder = lead.origemSistema === 'landing' ? '#2563eb' : '#16a34a';
     infoEl.innerHTML = `
+<div style="margin-bottom:12px">
+  <button id="btnEditarLead" type="button" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;font-weight:600">✏️ Editar dados</button>
+</div>
 <p><span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${origemBg};color:${origemCor};border:1px solid ${origemBorder}">${origemLabel}</span></p>
 <p>👤 <b>Cliente:</b> ${esc(lead.nome)}</p>
 <p>📞 <b>Telefone:</b> ${esc(lead.telefone || '—')}</p>
@@ -333,4 +362,98 @@ function preencherAbaFinanciamento(lead) {
   const el = document.getElementById('detalhe-financiamento');
   if (!el) return;
   el.innerHTML = renderHtmlFinanciamento(lead, esc);
+}
+
+// ─── MODO EDIÇÃO ──────────────────────────────────────────────
+const _INPT = 'width:100%;box-sizing:border-box;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:14px;margin-top:3px';
+const _LBL  = 'display:flex;flex-direction:column;font-size:13px;color:#94a3b8;gap:2px';
+
+function campo(emoji, label, id, type, value, extra) {
+  return `<label style="${_LBL}">${emoji} ${label}<input id="${id}" type="${type}" value="${esc(String(value ?? ''))}" style="${_INPT}" ${extra || ''}/></label>`;
+}
+
+function ativarModoEdicao(lead) {
+  const infoEl = document.getElementById('detalhe-info-lead');
+  if (!infoEl) return;
+  infoEl.innerHTML = `
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <button id="btnSalvarEdicao" type="button" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:700">💾 Salvar</button>
+  <button id="btnCancelarEdicao" type="button" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;font-weight:600">✖ Cancelar</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+  ${campo('👤', 'Nome', 'edit-nome', 'text', lead.nome)}
+  ${campo('📞', 'Telefone', 'edit-telefone', 'text', lead.telefone)}
+  ${campo('📍', 'Endereço / Cidade', 'edit-endereco', 'text', lead.endereco)}
+  ${campo('🏢', 'Concessionária', 'edit-concessionaria', 'text', lead.concessionaria || lead.distribuidora)}
+  ${campo('💡', 'Conta de Luz (R$)', 'edit-valor', 'number', lead.valor ?? lead.valorConta ?? lead.contaDeLuz, 'min="0" step="0.01"')}
+  ${campo('⚡', 'Consumo (kWh/mês)', 'edit-consumo', 'number', lead.consumo ?? lead.consumoMensal, 'min="0"')}
+  ${campo('🔋', 'Potência do sistema (kWp)', 'edit-kwp', 'number', lead.kwp, 'min="0" step="0.01"')}
+  ${campo('📈', 'Geração Mensal (kWh)', 'edit-geracao', 'number', lead.geracao ?? lead.geracaoMensal, 'min="0"')}
+  ${campo('💰', 'Investimento (R$)', 'edit-investimento', 'number', lead.investimento, 'min="0" step="0.01"')}
+  ${campo('💸', 'Economia Mensal (R$)', 'edit-economia', 'number', lead.economia, 'min="0" step="0.01"')}
+  ${campo('⏳', 'Payback (anos)', 'edit-payback', 'number', lead.payback, 'min="0" step="0.1"')}
+</div>`;
+}
+
+async function salvarEdicaoLead() {
+  if (!_leadAtualId) return;
+  const lead = _leads.find(l => l.id === _leadAtualId);
+  if (!lead) return;
+
+  const get = id => (document.getElementById(id)?.value ?? '').trim();
+
+  const nome       = get('edit-nome');
+  const telefone   = get('edit-telefone');
+  const endereco   = get('edit-endereco');
+  const conc       = get('edit-concessionaria');
+  const valorStr   = get('edit-valor');
+  const consumoStr = get('edit-consumo');
+  const kwpStr     = get('edit-kwp');
+  const gerStr     = get('edit-geracao');
+  const invStr     = get('edit-investimento');
+  const ecoStr     = get('edit-economia');
+  const payStr     = get('edit-payback');
+
+  if (!nome)     { toast('Nome não pode ser vazio', 'error'); return; }
+  if (!telefone) { toast('Telefone não pode ser vazio', 'error'); return; }
+  if (valorStr !== '' && Number(valorStr) < 0) { toast('Conta de luz não pode ser negativa', 'error'); return; }
+  if (invStr   !== '' && Number(invStr)   < 0) { toast('Investimento não pode ser negativo', 'error'); return; }
+
+  const btn = document.getElementById('btnSalvarEdicao');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
+  const toNum = s => s !== '' ? Number(s) : undefined;
+  const updates = { nome, telefone, endereco, concessionaria: conc, editadoEm: new Date().toISOString() };
+
+  const valor = toNum(valorStr);
+  const consumo = toNum(consumoStr);
+  const kwp = toNum(kwpStr);
+  const geracao = toNum(gerStr);
+  const investimento = toNum(invStr);
+  const economia = toNum(ecoStr);
+  const payback = toNum(payStr);
+
+  if (valor       !== undefined) { updates.valor = valor; updates.contaDeLuz = valor; updates.valorConta = valor; }
+  if (consumo     !== undefined) { updates.consumo = consumo; updates.consumoMensal = consumo; }
+  if (kwp         !== undefined)   updates.kwp = kwp;
+  if (geracao     !== undefined) { updates.geracao = geracao; updates.geracaoMensal = geracao; }
+  if (investimento !== undefined)  updates.investimento = investimento;
+  if (economia    !== undefined)   updates.economia = economia;
+  if (payback     !== undefined)   updates.payback = payback;
+
+  try {
+    const leadDb  = getLeadDb(lead);
+    const col     = getLeadCollection(lead);
+    await updateDoc(doc(leadDb, col, _leadAtualId), updates);
+
+    // Atualiza cache local imediatamente — PDF usará dados novos sem cache antigo
+    Object.assign(lead, updates);
+
+    toast('Lead atualizado com sucesso', 'success');
+    preencherAbaLead(lead);
+  } catch (err) {
+    console.error('[CRM-Details] salvarEdicaoLead:', err);
+    toast('Erro ao salvar. Verifique o console.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar'; }
+  }
 }

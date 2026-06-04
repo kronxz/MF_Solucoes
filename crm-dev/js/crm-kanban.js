@@ -131,11 +131,12 @@ function tsLead(l) {
 }
 
 function filtrarLeadsKanban(leads) {
-  let lista = (leads || []).filter(l =>
-    l.deletado === false ||
-    l.deletado == null ||
-    String(l.deletado).toLowerCase() === 'false'
-  );
+  let lista = (leads || []).filter(l => {
+    const deletado = l.deletado;
+    const naoDeletado = deletado === false || deletado == null || String(deletado).toLowerCase() === 'false';
+    const naoExcluido = l.status !== 'excluido' && l.status !== 'arquivado';
+    return naoDeletado && naoExcluido;
+  });
   const busca = _filtro.busca.trim().toLowerCase();
   if (busca) {
     lista = lista.filter(l =>
@@ -320,13 +321,21 @@ async function voltarLead(id) {
 async function excluirLead(id) {
   if (!confirm('Mover lead para a lixeira?')) return;
   const lead = _leads.find(l => l.id === id);
+  if (!lead) { toast('Lead não encontrado', 'error'); return; }
   const { db: leadDb, collection: col } = getLeadSource(lead);
-  console.log(`[LEAD_ACTION] origem=${lead?.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=excluir`);
-  const payload = lead?.origemSistema === 'landing'
-    ? { status: 'excluido', deletadoEm: new Date().toISOString() }
+  console.log(`[LEAD_ACTION] origem=${lead.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=excluir`);
+  // deletado:true sempre presente para garantir filtro do kanban funcione em ambas origens
+  const payload = lead.origemSistema === 'landing'
+    ? { status: 'excluido', deletado: true, deletadoEm: new Date().toISOString() }
     : { deletado: true, deletadoEm: new Date().toISOString() };
-  await updateDoc(doc(leadDb, col, id), payload);
-  toast('Lead movido para lixeira', 'warn');
+  try {
+    await updateDoc(doc(leadDb, col, id), payload);
+    console.log(`[LEAD_ACTION] excluirLead sucesso — id:${id} col:${col}`);
+    toast('Lead movido para lixeira', 'warn');
+  } catch (err) {
+    console.error(`[LEAD_ACTION] excluirLead ERRO — id:${id} col:${col}`, err);
+    toast('Não foi possível excluir o lead. Verifique o console.', 'error');
+  }
 }
 
 async function fecharVenda(id) {
