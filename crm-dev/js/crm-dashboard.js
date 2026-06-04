@@ -103,11 +103,12 @@ export function atualizarAnalyticsMini(eventos) {
 
 }
 
-export function atualizarDashboardCompleto(leads, eventos) {
-  atualizarMetricas(leads);
-  atualizarTrafico(leads, eventos);
+export function atualizarDashboardCompleto(leads, eventos, landingLeads = []) {
+  const todos = [...(leads || []), ...(landingLeads || [])];
+  atualizarMetricas(todos);
+  atualizarTrafico(todos, eventos);
   atualizarAnalyticsMini(eventos);
-  atualizarOrigensLeads(leads);
+  atualizarOrigensLeads(todos);
 }
 
 /** Top origens e campanhas (leads ativos) */

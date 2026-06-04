@@ -1,6 +1,6 @@
 // [MF-AI-CHANGE] crm-analytics.js — Traffic summary + IA event copy box — 2026-05-22
 
-import { toast } from './crm-utils.js';
+import { toast, escHtml } from './crm-utils.js';
 import { EVENTS_TEXTAREA_LIMIT } from './crm-config.js';
 
 export function iniciarAnalytics() {
@@ -33,11 +33,12 @@ export function iniciarAnalytics() {
 
 // ─── RESUMO EXECUTIVO ────────────────────────────────────────
 export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landingLeads = []) {
-  const ativos = [...(leads || []), ...(landingLeads || [])].filter(l => !l.deletado);
+  const todosLeads = [...(leads || []), ...(landingLeads || [])];
+  const ativos  = todosLeads.filter(l => !l.deletado && l.status !== 'excluido');
   const fechados = ativos.filter(l => String(l.status || '').toLowerCase() === 'fechado');
   const taxaConversao = ativos.length ? ((fechados.length / ativos.length) * 100).toFixed(0) : 0;
 
-  // Single-pass aggregation for events to reduce allocations
+  // Agregação de eventos
   const sessions = new Set();
   let totalSimulacoes = 0, totalWhatsapp = 0, totalPropostas = 0, totalScrolls = 0, totalTelefones = 0;
   (eventos || []).forEach(e => {
@@ -50,6 +51,17 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landi
     else if (ev === 'telefone_digitado') totalTelefones += 1;
   });
   const totalVisitas = sessions.size;
+
+  // QR / UTM breakdown por campanha
+  const campanhas = {};
+  ativos.forEach(l => {
+    const camp = l.utm_campaign || l.utm_source || 'direto';
+    if (!campanhas[camp]) campanhas[camp] = { leads: 0, fechados: 0, whatsapp: 0 };
+    campanhas[camp].leads++;
+    if (String(l.status || '').toLowerCase() === 'fechado') campanhas[camp].fechados++;
+    if (l.cliquesWhatsapp > 0) campanhas[camp].whatsapp++;
+  });
+  const campTop = Object.entries(campanhas).sort((a, b) => b[1].leads - a[1].leads).slice(0, 8);
 
   const el = document.getElementById('analyticsResumo');
   const live = document.getElementById('analyticsLive');
@@ -68,6 +80,16 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landi
   const card = (icon, label, val, cor = '') =>
     `<div class="glass-card metric-card"><b>${icon} ${label}</b><span class="metric-value"${cor ? ` style="color:${cor}"` : ''}>${val}</span></div>`;
 
+  const campRows = campTop.map(([camp, d]) => {
+    const conv = d.leads > 0 ? ((d.fechados / d.leads) * 100).toFixed(0) : 0;
+    return `<tr>
+      <td style="padding:6px 12px;color:#e2e8f0">${escHtml(camp)}</td>
+      <td style="padding:6px 12px;text-align:center;color:#38bdf8">${d.leads}</td>
+      <td style="padding:6px 12px;text-align:center;color:#22c55e">${d.fechados}</td>
+      <td style="padding:6px 12px;text-align:center;color:#f59e0b">${conv}%</td>
+    </tr>`;
+  }).join('');
+
   el.innerHTML = `
 <div class="glass-card" style="padding:24px; margin-bottom:20px">
   <h2 style="margin-top:0">📈 Resumo Executivo</h2>
@@ -80,30 +102,83 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landi
     ${card('💬', 'WhatsApp', totalWhatsapp, '#22c55e')}
     ${card('🎯', 'Conversão CRM', taxaConversao + '%', '#a78bfa')}
     ${card('✅', 'Fechados', fechados.length, '#22c55e')}
+    ${card('👥', 'Leads Ativos', ativos.length, '#94a3b8')}
   </div>
-</div>`;
+</div>
+${campTop.length ? `
+<div class="glass-card" style="padding:24px;margin-bottom:20px">
+  <h2 style="margin-top:0">📍 Por Origem / QR Code</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="color:#64748b;border-bottom:1px solid rgba(255,255,255,0.08)">
+        <th style="padding:6px 12px;text-align:left">Campanha / Origem</th>
+        <th style="padding:6px 12px">Leads</th>
+        <th style="padding:6px 12px">Fechados</th>
+        <th style="padding:6px 12px">Conversão</th>
+      </tr>
+    </thead>
+    <tbody>${campRows}</tbody>
+  </table>
+</div>` : ''}`;
 
-  // Preenche o textarea de eventos brutos
-  preencherEventosBrutos(eventos, EVENTS_TEXTAREA_LIMIT);
+  // Relatório completo para IA
+  preencherRelatorioIA(eventos, ativos, fechados, campanhas, totalVisitas, totalSimulacoes, totalWhatsapp, EVENTS_TEXTAREA_LIMIT);
 }
 
-// ─── EVENTOS BRUTOS PARA IA ───────────────────────────────────
-function preencherEventosBrutos(eventos, limit = 200) {
+// ─── RELATÓRIO COMPLETO PARA IA ───────────────────────────────
+function preencherRelatorioIA(eventos, ativos, fechados, campanhas, visitas, simulacoes, whatsapp, limit) {
   const textarea = document.getElementById('textoEventos');
   if (!textarea) return;
 
+  const agora = new Date().toLocaleString('pt-BR');
   const out = [];
-  const lista = (eventos || []).slice(-limit).reverse();
-  for (let i = 0; i < lista.length; i++) {
-    const ev = lista[i];
-    out.push(`🔥 ${ev.evento}`);
-    out.push(`Score: ${ev.score || 0}`);
-    out.push(`Origem: ${ev.utm_source || 'direto'}`);
-    out.push(`Campanha: ${ev.utm_campaign || '-'}`);
-    out.push(`Sessão: ${ev.sessionId || '-'}`);
-    out.push('━━━━━━━━━━━━━━');
-    out.push('');
-  }
 
-  textarea.value = out.length ? out.join('\n') : 'Nenhum evento registrado ainda.';
+  out.push('══════════════════════════════════════════');
+  out.push('  RELATÓRIO COMPLETO MF SOLUÇÕES — ' + agora);
+  out.push('══════════════════════════════════════════');
+  out.push('');
+
+  // TRÁFEGO
+  out.push('📊 TRÁFEGO');
+  out.push(`  Visitas únicas: ${visitas}`);
+  out.push(`  Simulações: ${simulacoes}`);
+  out.push(`  Cliques WhatsApp: ${whatsapp}`);
+  out.push(`  Total eventos: ${(eventos || []).length}`);
+  out.push('');
+
+  // LEADS
+  out.push('👥 LEADS');
+  out.push(`  Total ativos: ${ativos.length}`);
+  out.push(`  Fechados: ${fechados.length}`);
+  out.push(`  Taxa conversão: ${ativos.length ? ((fechados.length / ativos.length) * 100).toFixed(1) : 0}%`);
+  const porStatus = {};
+  ativos.forEach(l => { const s = l.status || 'novo'; porStatus[s] = (porStatus[s] || 0) + 1; });
+  Object.entries(porStatus).forEach(([s, n]) => out.push(`  ${s}: ${n}`));
+  out.push('');
+
+  // ORIGENS / QR CODES
+  out.push('📍 ORIGENS E QR CODES');
+  Object.entries(campanhas).sort((a, b) => b[1].leads - a[1].leads).forEach(([camp, d]) => {
+    const conv = d.leads > 0 ? ((d.fechados / d.leads) * 100).toFixed(1) : 0;
+    out.push(`  ${camp}: ${d.leads} leads | ${d.fechados} fechados | ${conv}% conv.`);
+  });
+  out.push('');
+
+  // LEADS RECENTES (últimos 10)
+  out.push('🔖 ÚLTIMOS 10 LEADS ATIVOS');
+  ativos.slice(0, 10).forEach(l => {
+    out.push(`  ${l.nome || '—'} | ${l.telefone || '—'} | ${l.status || 'novo'} | origem: ${l.utm_source || 'direto'} | campanha: ${l.utm_campaign || '-'}`);
+  });
+  out.push('');
+
+  // EVENTOS RECENTES
+  out.push('🔥 ÚLTIMOS EVENTOS (' + Math.min(limit, (eventos || []).length) + ')');
+  const lista = (eventos || []).slice(-limit).reverse();
+  lista.forEach(ev => {
+    out.push(`  ${ev.evento} | score:${ev.score || 0} | origem:${ev.utm_source || 'direto'} | campanha:${ev.utm_campaign || '-'} | sessão:${(ev.sessionId || '-').substring(0, 8)}`);
+  });
+  out.push('');
+  out.push('══════════════════════════════════════════');
+
+  textarea.value = out.join('\n');
 }
