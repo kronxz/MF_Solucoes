@@ -277,9 +277,14 @@ function preencherIntelLanding(lead, el) {
   <p>📞 <b>Digitou telefone:</b> ${lead.digitouTelefone ? 'Sim' : 'Não'}</p>
   <p>📡 <b>UTM Source:</b> ${esc(lead.utm_source || '—')}</p>
   <p>📢 <b>Campanha:</b> ${esc(lead.utm_campaign || '—')}</p>
+  <p>🔗 <b>UTM Medium:</b> ${esc(lead.utm_medium || '—')}</p>
+  <p>🏷️ <b>UTM Term:</b> ${esc(lead.utm_term || '—')}</p>
+  <p>📍 <b>QR Code:</b> ${esc(lead.qr_code || lead.utm_content || '—')}</p>
+  <p>🆔 <b>Session ID:</b> ${esc(lead.sessionId || '—')}</p>
   <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
   <p>🗓 <b>Primeira visita:</b> ${esc(formatDt(lead.firstVisit))}</p>
   <p>🕐 <b>Última atividade:</b> ${esc(formatDt(lead.lastActivity || lead.createdAt))}</p>
+  <p>🌍 <b>Origem do tráfego:</b> ${esc(lead.referrer || lead.utm_source || 'Direto')}</p>
   <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
   <p>💡 <b>Sugestão:</b> ${sugestao}</p>
 </div>`;

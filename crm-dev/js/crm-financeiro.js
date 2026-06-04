@@ -158,7 +158,7 @@ export function renderizarFinanceiroPage() {
   const leadsFinanceiros = _leadsList.filter(l => {
     const possuiDados = _financeiroMap[l.id] !== undefined;
     const statusValido = ['fechado', 'instalacao', 'pos-venda'].includes(l.status);
-    return (statusValido || possuiDados) && !l.excluido;
+    return (statusValido || possuiDados) && !l.deletado && l.status !== 'excluido';
   }).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
   container.innerHTML = `

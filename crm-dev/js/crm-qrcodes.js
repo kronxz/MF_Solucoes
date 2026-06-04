@@ -23,6 +23,7 @@ const QR_CAMPANHAS = [
   { id: 'itaipuacu',    label: '📍 Itaipuaçu' },
   { id: 'centro_marica', label: '🏙️ Centro Maricá' },
   { id: 'ponta_negra',  label: '🏖️ Ponta Negra' },
+  { id: 'bambui',       label: '🌿 Bambuí' },
 ];
 
 function getProdDb() {
@@ -73,9 +74,29 @@ export async function carregarQRCodes() {
 
   try {
     const db = getProdDb();
-    const snap = await getDocs(query(collection(db, 'landing_visits'), orderBy('timestamp', 'desc'), limit(2000)));
 
-    const visitas = snap.docs.map(d => d.data());
+    // Tenta landing_visits primeiro; faz fallback para lp_leads se vazia
+    let visitas = [];
+    try {
+      const snap = await getDocs(query(collection(db, 'landing_visits'), orderBy('timestamp', 'desc'), limit(2000)));
+      visitas = snap.docs.map(d => d.data());
+    } catch (_) {}
+
+    // Complementa com lp_leads se landing_visits estiver vazia
+    if (!visitas.length) {
+      const snapLP = await getDocs(query(collection(db, 'lp_leads'), limit(2000)));
+      visitas = snapLP.docs.map(d => {
+        const data = d.data();
+        return {
+          utm_campaign: data.utm_campaign || '',
+          utm_source:   data.utm_source  || '',
+          whatsappClicks: data.cliquesWhatsapp || 0,
+          leadConvertido: true,
+          timestamp:    data.createdAt || null,
+          ...data
+        };
+      }).filter(v => !v.deletado && v.status !== 'excluido');
+    }
 
     // Totais gerais
     const totalVisitas  = visitas.length;

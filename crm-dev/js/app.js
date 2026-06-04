@@ -132,8 +132,8 @@ function atualizarTudo() {
   atualizarLeadsDetails([...leads, ...landingLeads]);
 
   // Sincroniza dados técnicos e financeiros
-  carregarDadosTecnico(leads, getInstalacoes());
-  carregarDadosFinanceiro(leads);
+  carregarDadosTecnico([...leads, ...landingLeads], getInstalacoes());
+  carregarDadosFinanceiro([...leads, ...landingLeads]);
 
   // Stats (somente se página visível)
   const statsAtiva = document.getElementById('statsPage')?.classList.contains('active');
@@ -462,7 +462,13 @@ function atualizarOpcoesInstalacao() {
   if (!select) return;
   select.innerHTML = '<option value="">Selecionar lead</option>';
   const leadsObj = getLeadsMap() || {};
+  const STATUS_ATIVOS = ['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao'];
   Object.values(leadsObj)
+    .filter(l => {
+      const del = l.deletado;
+      const naoDeletado = del === false || del == null || String(del).toLowerCase() === 'false';
+      return naoDeletado && STATUS_ATIVOS.includes(l.status);
+    })
     .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
     .forEach(lead => {
       const option = document.createElement('option');

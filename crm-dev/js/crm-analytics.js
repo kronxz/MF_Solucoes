@@ -78,6 +78,28 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landi
   const card = (icon, label, val, cor = '') =>
     `<div class="glass-card metric-card"><b>${icon} ${label}</b><span class="metric-value"${cor ? ` style="color:${cor}"` : ''}>${val}</span></div>`;
 
+  // Breakdown de origens, campanhas e QR codes
+  const origensMap = {};
+  const campanhasMap = {};
+  const qrMap = {};
+  [...(leads||[]), ...(landingLeads||[])].filter(l => !l.deletado && l.status !== 'excluido').forEach(l => {
+    const o = l.utm_source || 'direto';
+    const c = l.utm_campaign || '-';
+    const q = l.qr_code || l.utm_content || null;
+    origensMap[o] = (origensMap[o] || 0) + 1;
+    campanhasMap[c] = (campanhasMap[c] || 0) + 1;
+    if (q) qrMap[q] = (qrMap[q] || 0) + 1;
+  });
+
+  const topN = (obj, n = 5) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n);
+  const rankHtml = (items, label) => items.length
+    ? items.map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span>${escHtml(k)}</span><b style="color:#22c55e">${v}</b></div>`).join('')
+    : `<p class="crm-timeline-empty">Sem dados de ${label}</p>`;
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   el.innerHTML = `
 <div class="glass-card" style="padding:24px; margin-bottom:20px">
   <h2 style="margin-top:0">📈 Resumo Executivo</h2>
@@ -90,6 +112,20 @@ export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landi
     ${card('💬', 'WhatsApp', totalWhatsapp, '#22c55e')}
     ${card('🎯', 'Conversão CRM', taxaConversao + '%', '#a78bfa')}
     ${card('✅', 'Fechados', fechados.length, '#22c55e')}
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px">
+  <div class="glass-card" style="padding:18px">
+    <h3 style="margin-top:0;font-size:14px">📍 Top Origens</h3>
+    ${rankHtml(topN(origensMap), 'origens')}
+  </div>
+  <div class="glass-card" style="padding:18px">
+    <h3 style="margin-top:0;font-size:14px">📢 Top Campanhas</h3>
+    ${rankHtml(topN(campanhasMap), 'campanhas')}
+  </div>
+  <div class="glass-card" style="padding:18px">
+    <h3 style="margin-top:0;font-size:14px">📍 QR Codes</h3>
+    ${rankHtml(topN(qrMap), 'QR codes')}
   </div>
 </div>`;
 

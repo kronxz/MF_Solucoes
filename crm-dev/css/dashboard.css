@@ -113,6 +113,7 @@ body {
   right: 20px;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
   font-size: 12px;
   color: #94a3b8;
@@ -122,7 +123,20 @@ body {
   border-radius: 20px;
   border: 1px solid var(--borda-sutil);
   backdrop-filter: blur(10px);
+  max-width: calc(100vw - 240px);
+  overflow: hidden;
 }
+
+.crm-sync-status {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+  flex-shrink: 1;
+}
+
+.user-icon { flex-shrink: 0; }
+.btn-logout { flex-shrink: 0; }
 
 .user-email { color: #e2e8f0; font-weight: 600; }
 

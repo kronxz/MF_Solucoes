@@ -8,7 +8,11 @@ import { formatBRL, parseDataFirestore } from './crm-utils.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
 export function atualizarMetricas(leads, landingLeads) {
-  const ativos = [...(leads||[]), ...(landingLeads||[])].filter(l => !l.deletado);
+  const ativos = [...(leads||[]), ...(landingLeads||[])].filter(l => {
+    const deletado = l.deletado;
+    const naoDeletado = deletado === false || deletado == null || String(deletado).toLowerCase() === 'false';
+    return naoDeletado && l.status !== 'excluido' && l.status !== 'arquivado';
+  });
   const total = ativos.length;
 
   const negociacao = ativos.filter(l => {

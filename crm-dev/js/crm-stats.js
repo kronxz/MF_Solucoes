@@ -19,7 +19,7 @@ export function renderizarStatsKits(leads) {
 
   (leads || []).forEach(l => {
     if (l.deletado) return;
-    const sys = String(l.sistema || l.kitEscolhido || '').toLowerCase();
+    const sys = String(l.sistema || l.kitEscolhido || l.kitSelecionado || '').toLowerCase();
     if (sys.includes('essencial')) {
       counters.essencial.cliques += 1;
       if (String(l.status || '').toLowerCase() === 'fechado') counters.essencial.fechados += 1;
