@@ -59,16 +59,33 @@ export function carregarLeadsMap(onUpdate) {
   const uid = getAuth(app).currentUser?.uid;
   if (!uid) return;
 
-  // Lê todos os leads da coleção — sem filtro de userId — para incluir
-  // leads da calculadora (com userId) e leads da landing page (sem userId).
-  // Deduplicação natural: cada documento tem id único no Firestore.
-  return onSnapshot(collection(_db, 'leads'), (snapshot) => {
-    _leadsMap = {};
-    snapshot.docs.forEach(doc => {
-      _leadsMap[doc.id] = { id: doc.id, ...doc.data() };
-    });
+  // Dois listeners: calculadora (leads) + landing (lp_leads)
+  // Mesclados em _leadsMap — IDs únicos, sem duplicatas
+  let _mapCalc    = {};
+  let _mapLanding = {};
+
+  function merge() {
+    _leadsMap = { ..._mapCalc, ..._mapLanding };
     onUpdate(_leadsMap);
+  }
+
+  const unsubCalc = onSnapshot(collection(_db, 'leads'), (snapshot) => {
+    _mapCalc = {};
+    snapshot.docs.forEach(d => {
+      _mapCalc[d.id] = { id: d.id, origemSistema: 'calculadora', ...d.data() };
+    });
+    merge();
   });
+
+  const unsubLanding = onSnapshot(collection(_db, 'lp_leads'), (snapshot) => {
+    _mapLanding = {};
+    snapshot.docs.forEach(d => {
+      _mapLanding[d.id] = { id: d.id, origemSistema: 'landing', ...d.data() };
+    });
+    merge();
+  });
+
+  return () => { unsubCalc(); unsubLanding(); };
 }
 
 export function getInstalacoes() {
