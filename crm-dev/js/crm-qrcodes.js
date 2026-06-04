@@ -3,20 +3,10 @@
  * Lê landing_visits do Firestore (mf-solucoes-crm) e exibe por campanha.
  */
 
-import { getFirestore, collection, getDocs, query, orderBy, limit } from
+import { collection, getDocs, query, orderBy, limit } from
   'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { initializeApp, getApps } from
-  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { db } from '../firebase/config.js';
 import { toast } from './crm-utils.js';
-
-const PROD_CONFIG = {
-  apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
-  authDomain:        'mf-solucoes-crm.firebaseapp.com',
-  projectId:         'mf-solucoes-crm',
-  storageBucket:     'mf-solucoes-crm.firebasestorage.app',
-  messagingSenderId: '492242482187',
-  appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
-};
 
 // Campanhas dos QR Codes físicos
 const QR_CAMPANHAS = [
@@ -25,12 +15,6 @@ const QR_CAMPANHAS = [
   { id: 'ponta_negra',  label: '🏖️ Ponta Negra' },
   { id: 'bambui',       label: '🌿 Bambuí' },
 ];
-
-function getProdDb() {
-  const existing = getApps().find(a => a.name === 'lp-prod');
-  const app = existing || initializeApp(PROD_CONFIG, 'lp-prod');
-  return getFirestore(app);
-}
 
 function pct(num, den) {
   if (!den) return '—';
@@ -73,7 +57,7 @@ export async function carregarQRCodes() {
   el.innerHTML = '<p style="color:#64748b;text-align:center;padding:40px">⏳ Carregando métricas...</p>';
 
   try {
-    const db = getProdDb();
+    // db importado de config.js — mf-solucoes-crm com auth do usuário logado
 
     // Tenta landing_visits primeiro; faz fallback para lp_leads se vazia
     let visitas = [];
