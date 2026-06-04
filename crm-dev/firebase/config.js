@@ -14,24 +14,13 @@ const firebaseConfigProd = {
   appId: "1:492242482187:web:34c99a57f3b99c2260030e"
 };
 
-/* DEV - mf-solucoes-dev */
-const firebaseConfig = {
-  apiKey: "AIzaSyCI0FKKsy3WMcvagF2JXtChhuSxS5Y7L-0",
-  authDomain: "mf-solucoes-dev.firebaseapp.com",
-  projectId: "mf-solucoes-dev",
-  storageBucket: "mf-solucoes-dev.firebasestorage.app",
-  messagingSenderId: "431430457702",
-  appId: "1:431430457702:web:6a30286e56de91ad9c50a7",
-  measurementId: "G-QK81S43JLJ"
-};
-
 // Singleton pattern
 let app;
 if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log('FIREBASE APP (DEV):', app);
+    app = initializeApp(firebaseConfigProd);
+    console.log('FIREBASE APP (PROD):', app);
 } else {
-    app = getApp(); // if already initialized, use that one
+    app = getApp();
 }
 
 const db = getFirestore(app);
