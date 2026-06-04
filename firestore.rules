@@ -11,6 +11,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /lp_leads/{leadId} {
+      allow read, write: if true;
+    }
+
     match /landing_visits/{visitId} {
       allow write: if true;
       allow read: if request.auth != null;
