@@ -2,8 +2,28 @@
  * crm-trash.js — Lixeira: busca, restaurar, excluir permanente
  */
 
-import { doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { collection, doc, getDocs, updateDoc, deleteDoc, getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { toast, escHtml } from './crm-utils.js';
+
+const PROD_CONFIG = {
+  apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
+  authDomain:        'mf-solucoes-crm.firebaseapp.com',
+  projectId:         'mf-solucoes-crm',
+  storageBucket:     'mf-solucoes-crm.firebasestorage.app',
+  messagingSenderId: '492242482187',
+  appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
+};
+
+function getProdDb() {
+  const app = getApps().find(a => a.name === 'lp-prod') || initializeApp(PROD_CONFIG, 'lp-prod');
+  return getFirestore(app);
+}
+
+function getLeadSource(lead) {
+  if (lead?.origemSistema === 'landing') return { db: getProdDb(), col: 'lp_leads' };
+  return { db: _db, col: 'leads' };
+}
 
 let _db = null;
 let _leads = [];
@@ -14,6 +34,20 @@ function formatarData(dataISO) {
   const d = new Date(dataISO);
   if (Number.isNaN(d.getTime())) return '—';
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} - ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
+async function carregarLeadsLixeira() {
+  if (!_db) return;
+  const [snapCalc, snapLanding] = await Promise.all([
+    getDocs(collection(_db, 'leads')),
+    getDocs(collection(getProdDb(), 'lp_leads')).catch(() => ({ docs: [] }))
+  ]);
+  const calc    = snapCalc.docs.map(d => ({ id: d.id, origemSistema: 'calculadora', ...d.data() }));
+  const landing = snapLanding.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, origemSistema: 'landing', ...data, deletado: data.status === 'excluido' || data.deletado || false };
+  });
+  _leads = [...calc, ...landing];
 }
 
 export function iniciarLixeira(db) {
@@ -60,13 +94,14 @@ export function atualizarLeadsLixeira(leads) {
 
 export const atualizarLeadsTrash = atualizarLeadsLixeira;
 
-export function abrirLixeira() {
+export async function abrirLixeira() {
   const modal = document.getElementById('modalLixeira');
   if (!modal) return;
   modal.classList.add('ativo');
   modal.setAttribute('aria-hidden', 'false');
   const inp = document.getElementById('pesquisaLixeira');
   if (inp) inp.value = '';
+  await carregarLeadsLixeira();
   renderLixeira();
 }
 
@@ -116,17 +151,14 @@ async function restaurarLead(id) {
     toast('Erro interno ao restaurar lead', 'error');
     return;
   }
-
+  const lead = _leads.find(l => l.id === id);
+  const { db: leadDb, col } = getLeadSource(lead);
+  const payload = lead?.origemSistema === 'landing'
+    ? { status: 'novo', deletado: false, restauradoEm: new Date().toISOString() }
+    : { deletado: false, restauradoEm: new Date().toISOString() };
   try {
-    await updateDoc(doc(_db, 'leads', id), {
-      deletado: false,
-      restauradoEm: new Date().toISOString()
-    });
-    const lead = _leads.find(l => l.id === id);
-    if (lead) {
-      lead.deletado = false;
-      lead.restauradoEm = new Date().toISOString();
-    }
+    await updateDoc(doc(leadDb, col, id), payload);
+    if (lead) { lead.deletado = false; lead.restauradoEm = new Date().toISOString(); }
     renderLixeira();
     toast('Lead restaurado', 'success');
   } catch (e) {

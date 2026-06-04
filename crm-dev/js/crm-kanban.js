@@ -2,10 +2,23 @@
 // Handles: board render, card HTML, drag-and-drop, mover/voltar, excluir, whatsapp, proposta, fechar
 
 import {
-  doc, updateDoc, addDoc, collection, deleteDoc
+  doc, updateDoc, addDoc, collection, deleteDoc, getFirestore
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from '../firebase/config.js';
+
+// ─── HELPER DE ORIGEM ─────────────────────────────────────────
+function getLeadSource(lead) {
+  if (lead?.origemSistema === 'landing') {
+    const prodApp = getApps().find(a => a.name === 'lp-prod');
+    return {
+      db:         prodApp ? getFirestore(prodApp) : _db,
+      collection: 'lp_leads'
+    };
+  }
+  return { db: _db, collection: 'leads' };
+}
 import {
   crmCardIntel,
   toDateFromFirestore
@@ -23,12 +36,11 @@ function escHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-const COLUNAS = ['novo', 'contato', 'proposta', 'negociacao', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
+const COLUNAS = ['novo', 'contato', 'proposta', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
 const TITULOS = {
   novo: '🟡 Novos',
   contato: '🔵 Contato',
   proposta: '🟠 Proposta',
-  negociacao: '🟣 Negociação',
   fechado: '🟢 Fechado',
   instalacao: '🔧 Instalação',
   'pos-venda': '💼 Pós-Venda',
@@ -53,14 +65,11 @@ export function normalizarStatus(status) {
     novo: 'novo',
     contato: 'contato',
     proposta: 'proposta',
-    negociacao: 'negociacao',
-    'negociacao': 'negociacao',
     fechado: 'fechado',
     instalacao: 'instalacao',
     'pos-venda': 'pos-venda',
     'pos venda': 'pos-venda',
     'posvenda': 'pos-venda',
-    manutencao: 'manutencao',
     manutencao: 'manutencao'
   };
   return mapa[chave] || 'novo';
@@ -86,8 +95,13 @@ function criarCardHtml(lead) {
   const meio = lead.utm_medium || '-';
   const kit = lead.kitEscolhido || lead.sistema || '-';
 
+  const origemBadge = lead.origemSistema === 'landing'
+    ? '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#1e3a5f;color:#60a5fa;border:1px solid #2563eb">🔵 LANDING PAGE</span>'
+    : '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#052e16;color:#4ade80;border:1px solid #16a34a">🟢 CALCULADORA</span>';
+
   return `
 <div class="card" draggable="true" data-lead-id="${lead.id}">
+  ${origemBadge}
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>
@@ -117,11 +131,12 @@ function tsLead(l) {
 }
 
 function filtrarLeadsKanban(leads) {
-  let lista = (leads || []).filter(l =>
-    l.deletado === false ||
-    l.deletado == null ||
-    String(l.deletado).toLowerCase() === 'false'
-  );
+  let lista = (leads || []).filter(l => {
+    const deletado = l.deletado;
+    const naoDeletado = deletado === false || deletado == null || String(deletado).toLowerCase() === 'false';
+    const naoExcluido = l.status !== 'excluido' && l.status !== 'arquivado';
+    return naoDeletado && naoExcluido;
+  });
   const busca = _filtro.busca.trim().toLowerCase();
   if (busca) {
     lista = lista.filter(l =>
@@ -271,9 +286,11 @@ export function iniciarKanban(db, onDetalhes) {
 
 // ─── AÇÕES DOS LEADS ──────────────────────────────────────────
 async function moverParaColuna(id, novoStatus) {
-  const ref = doc(_db, 'leads', id);
   const lead = _leads.find(l => l.id === id);
   if (!lead) return;
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=mover→${novoStatus}`);
+  const ref = doc(leadDb, col, id);
   const historico = lead.historico || [];
   historico.push({ acao: 'Movido para ' + novoStatus, data: new Date().toISOString() });
   await updateDoc(ref, {
@@ -303,15 +320,21 @@ async function voltarLead(id) {
 
 async function excluirLead(id) {
   if (!confirm('Mover lead para a lixeira?')) return;
-  const ref = doc(_db, 'leads', id);
-  console.log('[CRM-Kanban] excluirLead — id:', id);
+  const lead = _leads.find(l => l.id === id);
+  if (!lead) { toast('Lead não encontrado', 'error'); return; }
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=excluir`);
+  // deletado:true sempre presente para garantir filtro do kanban funcione em ambas origens
+  const payload = lead.origemSistema === 'landing'
+    ? { status: 'excluido', deletado: true, deletadoEm: new Date().toISOString() }
+    : { deletado: true, deletadoEm: new Date().toISOString() };
   try {
-    await updateDoc(ref, { deletado: true, deletadoEm: new Date().toISOString() });
-    console.log('[CRM-Kanban] excluirLead — sucesso:', id);
+    await updateDoc(doc(leadDb, col, id), payload);
+    console.log(`[LEAD_ACTION] excluirLead sucesso — id:${id} col:${col}`);
     toast('Lead movido para lixeira', 'warn');
   } catch (err) {
-    console.error('[CRM-Kanban] excluirLead — erro:', err);
-    toast('Não foi possível excluir o lead.', 'error');
+    console.error(`[LEAD_ACTION] excluirLead ERRO — id:${id} col:${col}`, err);
+    toast('Não foi possível excluir o lead. Verifique o console.', 'error');
   }
 }
 
@@ -327,7 +350,9 @@ async function fecharVenda(id) {
   if (sistema.includes('Premium')) est.premiumFechados = (est.premiumFechados || 0) + 1;
   localStorage.setItem('estatisticas', JSON.stringify(est));
 
-  await updateDoc(doc(_db, 'leads', id), { status: 'fechado' });
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  console.log(`[LEAD_ACTION] origem=${lead?.origemSistema || 'calculadora'} colecao=${col} id=${id} acao=fecharVenda`);
+  await updateDoc(doc(leadDb, col, id), { status: 'fechado' });
   toast('🚀 Venda fechada!', 'success');
 }
 

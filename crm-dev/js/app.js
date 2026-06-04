@@ -8,8 +8,9 @@ import {
   onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import {
-  collection, query, where, orderBy, limit, onSnapshot
+  collection, query, where, orderBy, limit, onSnapshot, getFirestore, doc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { LEADS_LIMIT } from './crm-config.js';
 
 // Módulos CRM Dev
@@ -29,6 +30,8 @@ import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarLista
 import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage, getTecnicoMap } from './crm-tecnico.js';
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
+import { carregarQRCodes } from './crm-qrcodes.js';
+// crm-leads-landing.js — módulo SPA removido; lp_leads integrado ao Kanban principal via iniciarRealtimeLanding
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
 let leads = [];
@@ -41,6 +44,8 @@ let _syncFlashTimer = null;
 let _backupSaveTimer = null;
 let _leadsMap = new Map();
 let _atualizarTimer = null;
+let landingLeads = [];
+let unsubscribeLanding = null;
 
 // ─── NAVEGAÇÃO ────────────────────────────────────────────────
 function mostrarPagina(pageId) {
@@ -62,13 +67,16 @@ function mostrarPagina(pageId) {
 
   // Renderiza gráfico ao abrir stats (Chart.js precisa de elemento visível)
   if (pageId === 'statsPage') {
-    renderizarStatsKits(leads);
-    renderizarGraficoLeads(leads);
+    renderizarStatsKits([...leads, ...landingLeads]);
+    renderizarGraficoLeads([...leads, ...landingLeads]);
   }
-  if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm);
+  if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm, landingLeads);
   if (pageId === 'visitasPage') renderizarVisitas(eventos);
-  if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
-  if (pageId === 'leadsPage') renderizarKanban(leads);
+  if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
+  if (pageId === 'leadsPage') {
+    const leadsUnificados = [...leads, ...landingLeads];
+    renderizarKanban(leadsUnificados);
+  }
   if (pageId === 'instalacoesPage') {
     atualizarOpcoesInstalacao();
     renderizarListaInstalacoes('instalacoesLista');
@@ -82,6 +90,10 @@ function mostrarPagina(pageId) {
   if (pageId === 'notificacoesPage') {
     renderizarNotificacoesPage();
   }
+  if (pageId === 'qrcodesPage') {
+    carregarQRCodes();
+  }
+  // leadsLandingPage removido — leads landing aparecem na aba Leads principal
 }
 
 function iniciarNavegacao() {
@@ -108,12 +120,16 @@ function iniciarNavegacao() {
 function atualizarTudo() {
   showKanbanSkeleton(false);
   const paginaAtiva = document.querySelector('.page.active')?.id;
-  if (paginaAtiva === 'leadsPage') renderizarKanban(leads);
-  if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos);
+  if (paginaAtiva === 'leadsPage') {
+    const leadsUnificados = [...leads, ...landingLeads];
+    console.log('[UNIFICADO] renderizarKanban com', leadsUnificados.length, 'leads');
+    renderizarKanban(leadsUnificados);
+  }
+  if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
 
   // Lixeira e detalhes sempre sincronizados em segundo plano
-  atualizarLeadsLixeira(leads);
-  atualizarLeadsDetails(leads);
+  atualizarLeadsLixeira([...leads, ...landingLeads]);
+  atualizarLeadsDetails([...leads, ...landingLeads]);
 
   // Sincroniza dados técnicos e financeiros
   carregarDadosTecnico(leads, getInstalacoes());
@@ -122,12 +138,12 @@ function atualizarTudo() {
   // Stats (somente se página visível)
   const statsAtiva = document.getElementById('statsPage')?.classList.contains('active');
   if (statsAtiva) {
-    renderizarStatsKits(leads);
-    renderizarGraficoLeads(leads);
+    renderizarStatsKits([...leads, ...landingLeads]);
+    renderizarGraficoLeads([...leads, ...landingLeads]);
   }
 
   const analyticsAtiva = document.getElementById('analyticsPage')?.classList.contains('active');
-  if (analyticsAtiva) renderizarAnalytics(eventos, leads, eventosSyncEm);
+  if (analyticsAtiva) renderizarAnalytics(eventos, leads, eventosSyncEm, landingLeads);
 
   const visitasAtiva = document.getElementById('visitasPage')?.classList.contains('active');
   if (visitasAtiva) renderizarVisitas(eventos);
@@ -156,6 +172,7 @@ function atualizarTudo() {
 // ─── LISTENERS REALTIME ───────────────────────────────────────
 function limparListeners() {
   if (typeof unsubscribeLeads === 'function') { unsubscribeLeads(); unsubscribeLeads = null; }
+  if (typeof unsubscribeLanding === 'function') { unsubscribeLanding(); unsubscribeLanding = null; }
   pararRealtimeEventos();
   unsubscribeEventos = null;
   pararTecnico();
@@ -182,7 +199,7 @@ function iniciarRealtimeLeads(userId) {
         if (change.type === 'added' || change.type === 'modified') {
           // [ACTIVE_APP_FILE] app.js — todos os leads passam para o kanban sem filtro aqui
           console.log('[APP_SNAPSHOT] lead recebido:', id, '| nome:', data.nome, '| createdAt:', !!data.createdAt, '| deletado:', data.deletado);
-          _leadsMap.set(id, data);
+          _leadsMap.set(id, { ...data, origemSistema: 'calculadora' });
         } else if (change.type === 'removed') {
           _leadsMap.delete(id);
         }
@@ -215,6 +232,57 @@ function iniciarRealtimeLeads(userId) {
       toast('Erro ao sincronizar leads', 'error');
     }
   );
+}
+
+function iniciarRealtimeLanding() {
+  if (unsubscribeLanding) { unsubscribeLanding(); }
+
+  const PROD_CONFIG = {
+    apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
+    authDomain:        'mf-solucoes-crm.firebaseapp.com',
+    projectId:         'mf-solucoes-crm',
+    storageBucket:     'mf-solucoes-crm.firebasestorage.app',
+    messagingSenderId: '492242482187',
+    appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
+  };
+  const existingApp = getApps().find(a => a.name === 'lp-prod');
+  const prodApp     = existingApp || initializeApp(PROD_CONFIG, 'lp-prod');
+  const dbProd      = getFirestore(prodApp);
+
+  const q = query(collection(dbProd, 'lp_leads'), orderBy('createdAt', 'desc'));
+
+  unsubscribeLanding = onSnapshot(q, snap => {
+    landingLeads = snap.docs.map(d => {
+      const data = d.data();
+      const lead = {
+        // defaults para campos que o Kanban espera
+        nome:      data.nome      || '(sem nome)',
+        telefone:  data.telefone  || '',
+        valor:     data.valorConta || '',
+        status:    (data.status && data.status !== 'excluido') ? data.status : 'novo',
+        deletado:  data.status === 'excluido' || data.deletado || false,
+        createdAt: data.createdAt || new Date().toISOString(),
+        // dados originais (podem sobrescrever defaults)
+        ...data,
+        // campos de identidade — SEMPRE ao final para não serem sobrescritos por ...data
+        id:            d.id,
+        origemSistema: 'landing',
+        origemTipo:    'landing',
+        origemLabel:   'LANDING PAGE',
+      };
+      console.log('[LANDING_SOURCE]', d.id, lead.origemSistema);
+      return lead;
+    });
+
+    console.log('[LANDING] landingLeads.length:', landingLeads.length);
+    console.log('[UNIFICADO] total:', leads.length + landingLeads.length);
+
+    // Atualiza o Kanban se estiver visível
+    if (_atualizarTimer) clearTimeout(_atualizarTimer);
+    _atualizarTimer = setTimeout(() => { atualizarTudo(); _atualizarTimer = null; }, 150);
+  }, err => {
+    console.error('[LANDING] onSnapshot lp_leads erro:', err);
+  });
 }
 
 function iniciarRealtimeEventosCRM(userId) {
@@ -275,12 +343,14 @@ onAuthStateChanged(auth, async (user) => {
   console.log('[FIRESTORE] Registrando listeners em tempo real para leads e eventos...');
   iniciarNotepad(db, user.uid);
   iniciarRealtimeLeads(user.uid);
+  iniciarRealtimeLanding();
   iniciarRealtimeEventosCRM(user.uid);
 
   initInstalacoes(db);
   initTecnico(db);
   initFinanceiro(db);
   initNotificacoes(db);
+  // iniciarLeadsLanding() removido — lp_leads carregado por iniciarRealtimeLanding()
   carregarInstalacoes(() => {
     if (document.getElementById('instalacoesPage')?.classList.contains('active')) {
       renderizarListaInstalacoes('instalacoesLista');
@@ -314,11 +384,65 @@ async function bootstrapApp() {
   iniciarNavegacao();
   iniciarLixeira(db);
   iniciarDetails(db);
+
+  // Handler de seleção de kit para leads landing no modalDetalhes
+  document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-select-kit-crm');
+    if (!btn) return;
+    const lead = window._crmLeadAberto;
+    if (!lead || lead.origemSistema !== 'landing') return;
+
+    const kit = JSON.parse(btn.dataset.kit);
+    const { db: leadDb } = (() => {
+      const prodApp = getApps().find(a => a.name === 'lp-prod');
+      const d = prodApp ? getFirestore(prodApp) : null;
+      return { db: d };
+    })();
+    if (!leadDb) return;
+
+    await updateDoc(doc(leadDb, 'lp_leads', lead.id), {
+      kitSelecionado:    kit.nome,
+      potenciaSistema:   kit.kwp,
+      quantidadePlacas:  kit.placas,
+      potenciaPlaca:     kit.potenciaPlaca || 580,
+      inversor:          kit.inversor || '',
+      economiaMensal:    kit.economia,
+      investimento:      kit.investimento,
+      payback:           kit.payback,
+      // campos que crm-proposal.js lê
+      kwp:               kit.kwp,
+      placas:            kit.placas,
+      geracao:           kit.geracao,
+      economia:          kit.economia,
+      kitEscolhido:      kit.nome,
+      sistema:           kit.nome,
+    });
+
+    // Habilita botão Proposta
+    const btnProposta = document.getElementById('btnPropostaModal');
+    if (btnProposta) btnProposta.disabled = false;
+
+    // Atualiza lead em memória
+    Object.assign(lead, { kitSelecionado: kit.nome, kitEscolhido: kit.nome, sistema: kit.nome,
+      kwp: kit.kwp, placas: kit.placas, geracao: kit.geracao, economia: kit.economia,
+      investimento: kit.investimento, payback: kit.payback, inversor: kit.inversor || '' });
+
+    // Re-abre modal para refletir kit selecionado
+    window._crmLeadAberto = lead;
+    abrirDetalhes(lead.id);
+  });
   iniciarAnalytics();
   iniciarInstalacoesPage();
 
+  // Botão de refresh na página QR Codes
+  document.getElementById('btn-refresh-qr')?.addEventListener('click', () => carregarQRCodes());
+
   // Kanban: callback para abrir detalhes
-  iniciarKanban(db, (leadId) => abrirDetalhes(leadId));
+  iniciarKanban(db, (leadId) => {
+    // Armazena o lead atual (usado pelo handler de kit selection abaixo)
+    window._crmLeadAberto = [...leads, ...landingLeads].find(l => l.id === leadId) || null;
+    abrirDetalhes(leadId);
+  });
 
   // Página inicial padrão
   mostrarPagina('dashboardPage');
