@@ -72,7 +72,9 @@ export function carregarLeadsMap(onUpdate) {
   const unsubCalc = onSnapshot(collection(_db, 'leads'), (snapshot) => {
     _mapCalc = {};
     snapshot.docs.forEach(d => {
-      _mapCalc[d.id] = { id: d.id, origemSistema: 'calculadora', ...d.data() };
+      const data = d.data();
+      if (data.deletado === true || data.status === 'excluido') return;
+      _mapCalc[d.id] = { id: d.id, origemSistema: 'calculadora', ...data };
     });
     merge();
   });
@@ -80,7 +82,9 @@ export function carregarLeadsMap(onUpdate) {
   const unsubLanding = onSnapshot(collection(_db, 'lp_leads'), (snapshot) => {
     _mapLanding = {};
     snapshot.docs.forEach(d => {
-      _mapLanding[d.id] = { id: d.id, origemSistema: 'landing', ...d.data() };
+      const data = d.data();
+      if (data.deletado === true || data.status === 'excluido') return;
+      _mapLanding[d.id] = { id: d.id, origemSistema: 'landing', ...data };
     });
     merge();
   });

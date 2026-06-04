@@ -32,8 +32,8 @@ export function iniciarAnalytics() {
 }
 
 // ─── RESUMO EXECUTIVO ────────────────────────────────────────
-export function renderizarAnalytics(eventos, leads = [], updatedAt = null) {
-  const ativos = (leads || []).filter(l => !l.deletado);
+export function renderizarAnalytics(eventos, leads = [], updatedAt = null, landingLeads = []) {
+  const ativos = [...(leads || []), ...(landingLeads || [])].filter(l => !l.deletado);
   const fechados = ativos.filter(l => String(l.status || '').toLowerCase() === 'fechado');
   const taxaConversao = ativos.length ? ((fechados.length / ativos.length) * 100).toFixed(0) : 0;
 

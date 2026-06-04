@@ -80,16 +80,17 @@ export function atualizarLeadsLixeira(leads) {
 
 export const atualizarLeadsTrash = atualizarLeadsLixeira;
 
-export function abrirLixeira() {
+export async function abrirLixeira() {
   const modal = document.getElementById('modalLixeira');
   if (!modal) return;
   modal.classList.add('ativo');
   modal.setAttribute('aria-hidden', 'false');
   const inp = document.getElementById('pesquisaLixeira');
   if (inp) inp.value = '';
-  // Usa _leads dos listeners realtime (atualizarLeadsLixeira) — sempre frescos.
-  // carregarLeadsLixeira() usava getDocs com cache do Firestore e sobrescrevia
-  // os dados ao vivo, fazendo leads recém-deletados não aparecerem.
+  // Render imediato com dados ao vivo (listeners realtime)
+  renderLixeira();
+  // Fetch background do Firestore para incluir leads sem createdAt (mais antigos)
+  await carregarLeadsLixeira();
   renderLixeira();
 }
 
