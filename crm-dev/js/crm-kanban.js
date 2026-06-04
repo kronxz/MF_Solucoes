@@ -304,8 +304,15 @@ async function voltarLead(id) {
 async function excluirLead(id) {
   if (!confirm('Mover lead para a lixeira?')) return;
   const ref = doc(_db, 'leads', id);
-  await updateDoc(ref, { deletado: true, deletadoEm: new Date().toISOString() });
-  toast('Lead movido para lixeira', 'warn');
+  console.log('[CRM-Kanban] excluirLead — id:', id);
+  try {
+    await updateDoc(ref, { deletado: true, deletadoEm: new Date().toISOString() });
+    console.log('[CRM-Kanban] excluirLead — sucesso:', id);
+    toast('Lead movido para lixeira', 'warn');
+  } catch (err) {
+    console.error('[CRM-Kanban] excluirLead — erro:', err);
+    toast('Não foi possível excluir o lead.', 'error');
+  }
 }
 
 async function fecharVenda(id) {

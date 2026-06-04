@@ -48,6 +48,19 @@ export function iniciarDetails(db) {
     else toast('Lead não encontrado', 'error');
   });
 
+  // Edição de dados do lead
+  document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
+    if (e.target.id === 'btnEditarLead') {
+      const lead = _leads.find(l => l.id === _leadAtualId);
+      if (lead) ativarModoEdicao(lead);
+    } else if (e.target.id === 'btnCancelarEdicao') {
+      const lead = _leads.find(l => l.id === _leadAtualId);
+      if (lead) preencherAbaLead(lead);
+    } else if (e.target.id === 'btnSalvarEdicao') {
+      await salvarEdicaoLead();
+    }
+  });
+
   const obsBox = document.getElementById('detalhe-observacoes');
   const obsStatus = document.getElementById('detalhe-obs-status');
   obsBox?.addEventListener('input', () => {
@@ -178,6 +191,9 @@ async function preencherAbaLead(lead) {
 
   if (infoEl) {
     infoEl.innerHTML = `
+<div style="margin-bottom:12px">
+  <button id="btnEditarLead" type="button" style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;font-weight:600">✏️ Editar dados</button>
+</div>
 <p>👤 <b>Cliente:</b> ${esc(lead.nome)}</p>
 <p>📞 <b>Telefone:</b> ${esc(lead.telefone || '—')}</p>
 <p>📍 <b>Endereço:</b> ${esc(lead.endereco || '—')}</p>
@@ -277,4 +293,101 @@ function preencherAbaFinanciamento(lead) {
   const el = document.getElementById('detalhe-financiamento');
   if (!el) return;
   el.innerHTML = renderHtmlFinanciamento(lead, esc);
+}
+
+// ─── MODO EDIÇÃO ──────────────────────────────────────────────
+const EDIT_INPUT_STYLE = 'width:100%;box-sizing:border-box;background:#1e293b;color:#f1f5f9;border:1px solid #334155;border-radius:6px;padding:6px 10px;font-size:14px;margin-top:2px';
+const EDIT_LABEL_STYLE = 'display:flex;flex-direction:column;font-size:13px;color:#94a3b8;gap:2px';
+
+function campoEdit(emoji, label, id, type, value, extra) {
+  const safeVal = esc(String(value ?? ''));
+  const extraAttr = extra || '';
+  return `<label style="${EDIT_LABEL_STYLE}">${emoji} ${label}
+    <input id="${id}" type="${type}" value="${safeVal}" style="${EDIT_INPUT_STYLE}" ${extraAttr} />
+  </label>`;
+}
+
+function ativarModoEdicao(lead) {
+  const infoEl = document.getElementById('detalhe-info-lead');
+  if (!infoEl) return;
+
+  infoEl.innerHTML = `
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <button id="btnSalvarEdicao" type="button" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:700">💾 Salvar</button>
+  <button id="btnCancelarEdicao" type="button" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;font-weight:600">✖ Cancelar</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+  ${campoEdit('👤', 'Nome', 'edit-nome', 'text', lead.nome)}
+  ${campoEdit('📞', 'Telefone', 'edit-telefone', 'text', lead.telefone)}
+  ${campoEdit('📍', 'Endereço / Cidade', 'edit-endereco', 'text', lead.endereco)}
+  ${campoEdit('🏢', 'Concessionária', 'edit-concessionaria', 'text', lead.concessionaria || lead.distribuidora)}
+  ${campoEdit('💡', 'Conta de Luz (R$)', 'edit-valor', 'number', lead.valor, 'min="0" step="0.01"')}
+  ${campoEdit('⚡', 'Consumo (kWh/mês)', 'edit-consumo', 'number', lead.consumo, 'min="0"')}
+  ${campoEdit('🔋', 'Potência do sistema (kWp)', 'edit-kwp', 'number', lead.kwp, 'min="0" step="0.01"')}
+  ${campoEdit('📈', 'Geração Mensal (kWh)', 'edit-geracao', 'number', lead.geracao || lead.geracaoMensal, 'min="0"')}
+  ${campoEdit('💰', 'Investimento (R$)', 'edit-investimento', 'number', lead.investimento, 'min="0" step="0.01"')}
+  ${campoEdit('💸', 'Economia Mensal (R$)', 'edit-economia', 'number', lead.economia, 'min="0" step="0.01"')}
+  ${campoEdit('⏳', 'Payback (anos)', 'edit-payback', 'number', lead.payback, 'min="0" step="0.1"')}
+</div>`;
+}
+
+async function salvarEdicaoLead() {
+  if (!_leadAtualId || !_db) return;
+
+  const get = id => document.getElementById(id)?.value ?? '';
+
+  const nome = get('edit-nome').trim();
+  const telefone = get('edit-telefone').trim();
+  const endereco = get('edit-endereco').trim();
+  const concessionaria = get('edit-concessionaria').trim();
+  const valorStr = get('edit-valor');
+  const consumoStr = get('edit-consumo');
+  const kwpStr = get('edit-kwp');
+  const geracaoStr = get('edit-geracao');
+  const investimentoStr = get('edit-investimento');
+  const economiaStr = get('edit-economia');
+  const paybackStr = get('edit-payback');
+
+  if (!nome) { toast('Nome não pode ser vazio', 'error'); return; }
+  if (!telefone) { toast('Telefone não pode ser vazio', 'error'); return; }
+  if (valorStr !== '' && Number(valorStr) < 0) { toast('Conta de luz não pode ser negativa', 'error'); return; }
+  if (investimentoStr !== '' && Number(investimentoStr) < 0) { toast('Investimento não pode ser negativo', 'error'); return; }
+
+  const btnSalvar = document.getElementById('btnSalvarEdicao');
+  if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = '⏳ Salvando...'; }
+
+  const toNum = s => s !== '' ? Number(s) : undefined;
+
+  const updates = { nome, telefone, endereco, concessionaria, editadoEm: new Date().toISOString() };
+  const valor = toNum(valorStr);
+  const consumo = toNum(consumoStr);
+  const kwp = toNum(kwpStr);
+  const geracao = toNum(geracaoStr);
+  const investimento = toNum(investimentoStr);
+  const economia = toNum(economiaStr);
+  const payback = toNum(paybackStr);
+
+  if (valor !== undefined) { updates.valor = valor; updates.contaDeLuz = valor; }
+  if (consumo !== undefined) { updates.consumo = consumo; updates.consumoMensal = consumo; }
+  if (kwp !== undefined) updates.kwp = kwp;
+  if (geracao !== undefined) { updates.geracao = geracao; updates.geracaoMensal = geracao; }
+  if (investimento !== undefined) updates.investimento = investimento;
+  if (economia !== undefined) updates.economia = economia;
+  if (payback !== undefined) updates.payback = payback;
+
+  try {
+    await updateDoc(doc(_db, 'leads', _leadAtualId), updates);
+
+    // Atualiza lead localmente para uso imediato (PDF não usa cache antigo)
+    const lead = _leads.find(l => l.id === _leadAtualId);
+    if (lead) Object.assign(lead, updates);
+
+    toast('Lead atualizado com sucesso', 'success');
+    const updated = _leads.find(l => l.id === _leadAtualId);
+    if (updated) preencherAbaLead(updated);
+  } catch (err) {
+    console.error('[CRM-Details] salvarEdicaoLead:', err);
+    toast('Erro ao salvar dados do lead', 'error');
+    if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = '💾 Salvar'; }
+  }
 }
