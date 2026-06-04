@@ -71,6 +71,7 @@
 .btn-avancar { background: #f59e0b; color: #000; }
 .btn-voltar { background: #6b7280; }
 .btn-excluir { background: #ef4444; }
+.btn-arquivar { background: #7c3aed; }
 .btn-detalhes { background: #0ea5e9; }
 .btn-proposta { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
 .btn-fechar-venda { background: #22c55e; grid-column: span 2; }

@@ -25,6 +25,7 @@ import {
 } from './crm-realtime.js';
 import { abrirProposta as abrirPropostaLead } from './crm-proposal.js';
 import { toast } from './crm-utils.js';
+import { arquivarLead } from './crm-arquivo.js';
 
 // ─── ESCAPE HTML (local implementation) ────────────────────────
 function escHtml(value) {
@@ -118,6 +119,7 @@ function criarCardHtml(lead) {
     <button type="button" class="btn-card btn-avancar" data-mover="${lead.id}">👉 Avançar</button>
     <button type="button" class="btn-card btn-voltar" data-voltar="${lead.id}">👈 Voltar</button>
     <button type="button" class="btn-card btn-excluir" data-excluir="${lead.id}">🗑️ Excluir</button>
+    <button type="button" class="btn-card btn-arquivar" data-arquivar="${lead.id}">🗂️ Arquivar</button>
     <button type="button" class="btn-card btn-detalhes" data-detalhes="${lead.id}">📊 Detalhes</button>
     <button type="button" class="btn-card btn-proposta" data-proposta="${lead.id}">📄 Proposta</button>
     <button type="button" class="btn-card btn-fechar-venda" data-fechar="${lead.id}">💰 Fechar Venda</button>
@@ -135,7 +137,8 @@ function filtrarLeadsKanban(leads) {
     const deletado = l.deletado;
     const naoDeletado = deletado === false || deletado == null || String(deletado).toLowerCase() === 'false';
     const naoExcluido = l.status !== 'excluido' && l.status !== 'arquivado';
-    return naoDeletado && naoExcluido;
+    const naoArquivado = !l.arquivado || String(l.arquivado).toLowerCase() === 'false';
+    return naoDeletado && naoExcluido && naoArquivado;
   });
   const busca = _filtro.busca.trim().toLowerCase();
   if (busca) {
@@ -196,12 +199,16 @@ export function iniciarKanban(db, onDetalhes) {
 
   // Delegação de eventos: todos os botões de card
   board.addEventListener('click', e => {
-    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
+    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
     if (!btn) return;
 
     if (btn.dataset.mover) moverLead(btn.dataset.mover);
     else if (btn.dataset.voltar) voltarLead(btn.dataset.voltar);
     else if (btn.dataset.excluir) excluirLead(btn.dataset.excluir);
+    else if (btn.dataset.arquivar) {
+      const lead = _leads.find(l => l.id === btn.dataset.arquivar);
+      arquivarLead(lead, _db);
+    }
     else if (btn.dataset.detalhes && _onDetalhes) _onDetalhes(btn.dataset.detalhes);
     else if (btn.dataset.proposta) abrirProposta(btn.dataset.proposta);
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);

@@ -31,6 +31,7 @@ import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage,
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
 import { carregarQRCodes } from './crm-qrcodes.js';
+import { iniciarArquivo } from './crm-arquivo.js';
 // crm-leads-landing.js — módulo SPA removido; lp_leads integrado ao Kanban principal via iniciarRealtimeLanding
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
@@ -383,7 +384,14 @@ async function bootstrapApp() {
   iniciarMonitorConexao();
   iniciarNavegacao();
   iniciarLixeira(db);
+  iniciarArquivo(db);
   iniciarDetails(db);
+
+  // Expor abrirDetalhes para uso externo (módulo arquivo)
+  window.abrirDetalhesExterno = (id) => {
+    window._crmLeadAberto = [...leads, ...landingLeads].find(l => l.id === id) || null;
+    abrirDetalhes(id);
+  };
 
   // Handler de seleção de kit para leads landing no modalDetalhes
   document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
@@ -467,7 +475,8 @@ function atualizarOpcoesInstalacao() {
     .filter(l => {
       const del = l.deletado;
       const naoDeletado = del === false || del == null || String(del).toLowerCase() === 'false';
-      return naoDeletado && STATUS_ATIVOS.includes(l.status);
+      const naoArquivado = !l.arquivado || String(l.arquivado).toLowerCase() === 'false';
+      return naoDeletado && naoArquivado && STATUS_ATIVOS.includes(l.status);
     })
     .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''))
     .forEach(lead => {

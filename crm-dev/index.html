@@ -216,6 +216,9 @@
         <button id="btn-novo-lead" type="button" class="btn-primary" style="background:var(--verde-acento)">
           ➕ Novo Lead
         </button>
+        <button id="btn-arquivo" type="button" class="btn-secondary">
+          🗂️ Arquivados
+        </button>
         <button id="btn-lixeira" type="button" class="btn-secondary">
           🗑️ Lixeira
         </button>
@@ -374,6 +377,20 @@
     </section>
 
   </main>
+
+  <!-- ════════════════════════════════
+       MODAL — ARQUIVADOS
+  ════════════════════════════════ -->
+  <div id="modalArquivo" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Leads arquivados" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">🗂️ Leads Arquivados</h2>
+        <button id="btn-fechar-arquivo" type="button" class="btn-fechar" aria-label="Fechar arquivo">✕</button>
+      </div>
+      <input id="pesquisaArquivo" type="search" placeholder="Pesquisar lead arquivado..." class="input-busca" autocomplete="off">
+      <div id="listaArquivo" role="list"></div>
+    </div>
+  </div>
 
   <!-- ════════════════════════════════
        MODAL — LIXEIRA
