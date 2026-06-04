@@ -310,4 +310,17 @@ window.CRM_INSTALACOES = {
   voltar: () => renderizarListaInstalacoes('instalacoesConteudo')
 };
 
+// Remove instalações cujo leadId não existe em _leadsMap (lead foi deletado).
+// Executada uma vez quando a página Instalações é aberta.
+export async function limparInstalacoesOrfas() {
+  if (!_db) return 0;
+  const orfas = _instalacoes.filter(inst => inst.leadId && !_leadsMap[inst.leadId]);
+  if (orfas.length === 0) return 0;
+  for (const inst of orfas) {
+    await deleteDoc(doc(_db, 'instalacoes', inst.id));
+  }
+  toast(`${orfas.length} instalação(ões) sem lead removida(s)`, 'success');
+  return orfas.length;
+}
+
 export { CHECKLIST_ITENS, STATUS_INSTALACAO };

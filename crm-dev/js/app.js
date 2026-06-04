@@ -25,7 +25,7 @@ import {
   toast, setGlobalLoading, flashSync, showKanbanSkeleton, showDashboardSkeleton,
   setSyncStatus, iniciarSidebarMobile, bindEscapeModals, iniciarMonitorConexao
 } from './crm-utils.js';
-import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarListaInstalacoes, criarInstalacao, getLeadsMap, getInstalacoes } from './crm-instalacoes.js';
+import { initInstalacoes, carregarInstalacoes, carregarLeadsMap, renderizarListaInstalacoes, criarInstalacao, getLeadsMap, getInstalacoes, limparInstalacoesOrfas } from './crm-instalacoes.js';
 import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage, getTecnicoMap } from './crm-tecnico.js';
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
@@ -71,6 +71,9 @@ function mostrarPagina(pageId) {
   if (pageId === 'leadsPage') renderizarKanban(leads);
   if (pageId === 'instalacoesPage') {
     atualizarOpcoesInstalacao();
+    limparInstalacoesOrfas().then(n => {
+      if (n > 0) renderizarListaInstalacoes('instalacoesLista');
+    });
     renderizarListaInstalacoes('instalacoesLista');
   }
   if (pageId === 'tecnicoPage') {
