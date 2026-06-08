@@ -421,6 +421,111 @@ html, body {
   line-height: 1.6;
 }
 
+/* ─── BACKUP CENTER ────────────────────────────────────────────── */
+.badge-safe {
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  color: var(--green);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.bkp-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+.bkp-card:hover { border-color: var(--accent); }
+
+.bkp-card--destaque {
+  border-color: rgba(245,158,11,0.4);
+  background: linear-gradient(135deg, var(--bg-2), rgba(245,158,11,0.04));
+  grid-column: span 3;
+  flex-direction: row;
+  align-items: center;
+}
+
+.bkp-icon { font-size: 32px; flex-shrink: 0; }
+
+.bkp-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.bkp-info h3 { font-size: 15px; font-weight: 700; color: var(--text); }
+.bkp-desc    { font-size: 12px; color: var(--text-muted); }
+.bkp-nota    { font-size: 11px; }
+.bkp-meta    { margin-top: 6px; min-height: 18px; }
+.bkp-tag {
+  font-size: 11px;
+  color: var(--green);
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.btn-backup {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.btn-backup:hover:not(:disabled) {
+  background: rgba(245,158,11,0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-backup:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-backup--destaque {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  padding: 10px 24px;
+  font-size: 14px;
+}
+.btn-backup--destaque:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #000;
+}
+
+.backup-log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  color: #a5f3fc;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.7;
+  margin-top: 10px;
+}
+
 /* ─── Utilitários ──────────────────────────────────────────────── */
 .muted { color: var(--text-muted); }
 

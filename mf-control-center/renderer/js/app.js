@@ -10,6 +10,7 @@ import { onAuthStateChanged, signOut }
 
 import { loginInit }     from './pages/login.js';
 import { dashboardInit } from './pages/dashboard.js';
+import { backupInit }    from './pages/backup.js';
 
 // ─── Estado Global ─────────────────────────────────────────────────────────────
 window._mfUser   = null;
@@ -26,6 +27,7 @@ function showPage(pageId) {
   window._mfPage = pageId;
 
   if (pageId === 'dashboard') dashboardInit();
+  if (pageId === 'backup')    backupInit();
 }
 
 // ─── Auth State ────────────────────────────────────────────────────────────────

@@ -13,11 +13,20 @@ contextBridge.exposeInMainWorld('MFControl', {
   getPlatform:   () => ipcRenderer.invoke('app:platform'),
   openExternal:  (url) => ipcRenderer.invoke('shell:openExternal', url),
 
-  // File System (backups)
+  // File System (listagem)
   fs: {
     listBackups: ()           => ipcRenderer.invoke('fs:listBackups'),
     readFile:    (filename)   => ipcRenderer.invoke('fs:readFile', filename),
     saveExport:  (opts)       => ipcRenderer.invoke('fs:saveExport', opts),
+  },
+
+  // Backup Center — 5 tipos
+  backup: {
+    firestore: (jsonData) => ipcRenderer.invoke('backup:firestore', jsonData),
+    rules:     ()         => ipcRenderer.invoke('backup:rules'),
+    crm:       ()         => ipcRenderer.invoke('backup:crm'),
+    landing:   ()         => ipcRenderer.invoke('backup:landing'),
+    completo:  (jsonData) => ipcRenderer.invoke('backup:completo', jsonData),
   },
 
   // Git (read-only)
