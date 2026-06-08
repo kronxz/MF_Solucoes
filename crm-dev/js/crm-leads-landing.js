@@ -3,6 +3,7 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12
 import {
   getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { db as _dbPrimario } from '../firebase/config.js';
 import { calcularKits } from '../../js/kits.js';
 
 const PROD_CONFIG = {
@@ -54,7 +55,7 @@ async function setStatus(id, status) {
 
 async function salvarKit(id, kit) {
   try {
-    await updateDoc(doc(_db, 'lp_leads', id), {
+    await updateDoc(doc(_dbPrimario, 'lp_leads', id), {
       kitSelecionado:  kit.kit,
       potenciaSistema: kit.kwp,
       numeroPlacas:    kit.placas,
