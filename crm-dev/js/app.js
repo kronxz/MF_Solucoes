@@ -392,12 +392,8 @@ async function bootstrapApp() {
     if (!lead || lead.origemSistema !== 'landing') return;
 
     const kit = JSON.parse(btn.dataset.kit);
-    const { db: leadDb } = (() => {
-      const prodApp = getApps().find(a => a.name === 'lp-prod');
-      const d = prodApp ? getFirestore(prodApp) : null;
-      return { db: d };
-    })();
-    if (!leadDb) return;
+    // lp_leads está no mesmo projeto mf-solucoes-crm; usar db autenticado
+    const leadDb = db;
 
     await updateDoc(doc(leadDb, 'lp_leads', lead.id), {
       kitSelecionado:    kit.nome,
