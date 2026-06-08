@@ -57,23 +57,67 @@ export function carregarInstalacoes(onUpdate) {
 
 const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao']);
 
+// Retorna a coleção correta baseado na origem do lead (_leadsMap já tem origemSistema)
+function getLeadSource(leadId) {
+  const lead = _leadsMap[leadId];
+  if (lead?.origemSistema === 'landing') return { col: 'lp_leads' };
+  return { col: 'leads' };
+}
+
 export function carregarLeadsMap(onUpdate) {
-  // orderBy('createdAt') exclui documentos sem o campo — idêntico ao comportamento do Kanban.
-  // Garante que leads fantasma (sem createdAt) não apareçam no dropdown de Instalações.
-  const q = query(collection(_db, 'leads'), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    console.log('[INST_QUERY_SIZE]', snapshot.size);
+  // Espelha exatamente o comportamento do Kanban:
+  //   orderBy('createdAt') exclui docs sem o campo (leads fantasma / lp_leads de teste)
+  //   Dois listeners paralelos — leads (calculadora) + lp_leads (landing page)
+  const qCalc    = query(collection(_db, 'leads'),    orderBy('createdAt', 'desc'));
+  const qLanding = query(collection(_db, 'lp_leads'), orderBy('createdAt', 'desc'));
+
+  let calcDocs    = {};
+  let landingDocs = {};
+
+  function merge() {
     _leadsMap = {};
-    snapshot.docs.forEach(doc => {
-      const data = doc.data();
+
+    // ── Calculadora ───────────────────────────────────────────
+    Object.entries(calcDocs).forEach(([id, data]) => {
       const status = String(data.status || 'novo');
       const inativo = data.deletado === true || data.arquivado === true || !STATUS_ATIVOS.has(status);
       if (inativo) return;
-      _leadsMap[doc.id] = { id: doc.id, ...data };
+      _leadsMap[id] = { id, ...data, origemSistema: 'calculadora' };
     });
-    console.log('[INST_MAP_SIZE]', Object.keys(_leadsMap).length);
+
+    // ── Landing page ──────────────────────────────────────────
+    // Mirrors app.js iniciarRealtimeLanding: status=null → 'novo', status='excluido' → deletado
+    Object.entries(landingDocs).forEach(([id, data]) => {
+      const rawStatus = data.status;
+      const status    = (rawStatus && rawStatus !== 'excluido') ? rawStatus : 'novo';
+      const inativo   = data.deletado === true
+                     || data.arquivado === true
+                     || rawStatus === 'excluido'
+                     || !STATUS_ATIVOS.has(status);
+      if (inativo) return;
+      _leadsMap[id] = { id, ...data, origemSistema: 'landing', status };
+    });
+
+    console.log('[INST_MAP_SIZE]', Object.keys(_leadsMap).length,
+                '| calc:', Object.keys(calcDocs).length,
+                '| landing:', Object.keys(landingDocs).length);
     onUpdate(_leadsMap);
+  }
+
+  const unsubCalc = onSnapshot(qCalc, snap => {
+    calcDocs = {};
+    snap.docs.forEach(d => { calcDocs[d.id] = d.data(); });
+    merge();
   });
+
+  const unsubLanding = onSnapshot(qLanding, snap => {
+    landingDocs = {};
+    snap.docs.forEach(d => { landingDocs[d.id] = d.data(); });
+    merge();
+  });
+
+  // Retorna função que cancela ambos os listeners
+  return () => { unsubCalc(); unsubLanding(); };
 }
 
 export function getInstalacoes() {
@@ -106,9 +150,10 @@ export async function criarInstalacao(leadId, dataInstalacao, responsavel, obser
   };
 
   const ref = await addDoc(collection(_db, 'instalacoes'), instalacao);
-  
-  // Atualiza lead para status instalação
-  await updateDoc(doc(_db, 'leads', leadId), {
+
+  // Atualiza lead para status instalação — roteado para a coleção correta
+  const { col } = getLeadSource(leadId);
+  await updateDoc(doc(_db, col, leadId), {
     status: 'instalacao',
     ultima_acao_nome: 'Instalação agendada',
     lastAction: new Date().toISOString()
@@ -296,10 +341,11 @@ window.CRM_INSTALACOES = {
   concluir: async (id) => {
     if (confirm('Confirmar conclusão da instalação?')) {
       await atualizarStatusInstalacao(id, 'concluido');
-      // Atualiza lead para pós-venda
+      // Atualiza lead para pós-venda — roteado para a coleção correta
       const inst = _instalacoes.find(i => i.id === id);
       if (inst?.leadId) {
-        await updateDoc(doc(_db, 'leads', inst.leadId), {
+        const { col } = getLeadSource(inst.leadId);
+        await updateDoc(doc(_db, col, inst.leadId), {
           status: 'pos-venda',
           ultima_acao_nome: 'Instalação concluída',
           lastAction: new Date().toISOString()
