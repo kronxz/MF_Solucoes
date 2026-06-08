@@ -3,11 +3,10 @@
 
 import {
   collection, query, where, getDocs, onSnapshot, orderBy, limit,
-  doc, updateDoc, getFirestore
+  doc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { TIMELINE_LIMIT } from './crm-config.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { app } from '../firebase/config.js';
 import { abrirProposta } from './crm-proposal.js';
 import { toast, escHtml } from './crm-utils.js';
@@ -27,10 +26,7 @@ let _leadAtualId = null;
 let _debounceObs = null;
 
 function getLeadDb(lead) {
-  if (lead?.origemSistema === 'landing') {
-    const prodApp = getApps().find(a => a.name === 'lp-prod');
-    return prodApp ? getFirestore(prodApp) : _db;
-  }
+  // lp_leads no mesmo projeto mf-solucoes-crm; usar _db autenticado
   return _db;
 }
 

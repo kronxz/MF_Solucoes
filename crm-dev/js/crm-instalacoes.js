@@ -55,6 +55,8 @@ export function carregarInstalacoes(onUpdate) {
   });
 }
 
+const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao']);
+
 export function carregarLeadsMap(onUpdate) {
   const q = query(collection(_db, 'leads'));
   return onSnapshot(q, (snapshot) => {
@@ -62,8 +64,10 @@ export function carregarLeadsMap(onUpdate) {
     _leadsMap = {};
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      const leadData = { id: doc.id, ...data };
-      _leadsMap[doc.id] = leadData;
+      const status = String(data.status || 'novo');
+      const inativo = data.deletado === true || data.arquivado === true || !STATUS_ATIVOS.has(status);
+      if (inativo) return;
+      _leadsMap[doc.id] = { id: doc.id, ...data };
     });
     console.log('[INST_MAP_SIZE]', Object.keys(_leadsMap).length);
     onUpdate(_leadsMap);

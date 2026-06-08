@@ -2,26 +2,12 @@
  * crm-trash.js — Lixeira: busca, restaurar, excluir permanente
  */
 
-import { collection, doc, getDocs, updateDoc, deleteDoc, getFirestore } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { collection, doc, getDocs, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { toast, escHtml } from './crm-utils.js';
 
-const PROD_CONFIG = {
-  apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
-  authDomain:        'mf-solucoes-crm.firebaseapp.com',
-  projectId:         'mf-solucoes-crm',
-  storageBucket:     'mf-solucoes-crm.firebasestorage.app',
-  messagingSenderId: '492242482187',
-  appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
-};
-
-function getProdDb() {
-  const app = getApps().find(a => a.name === 'lp-prod') || initializeApp(PROD_CONFIG, 'lp-prod');
-  return getFirestore(app);
-}
-
+// lp_leads está no mesmo projeto mf-solucoes-crm; usar _db autenticado
 function getLeadSource(lead) {
-  if (lead?.origemSistema === 'landing') return { db: getProdDb(), col: 'lp_leads' };
+  if (lead?.origemSistema === 'landing') return { db: _db, col: 'lp_leads' };
   return { db: _db, col: 'leads' };
 }
 
@@ -40,7 +26,7 @@ async function carregarLeadsLixeira() {
   if (!_db) return;
   const [snapCalc, snapLanding] = await Promise.all([
     getDocs(collection(_db, 'leads')),
-    getDocs(collection(getProdDb(), 'lp_leads')).catch(() => ({ docs: [] }))
+    getDocs(collection(_db, 'lp_leads')).catch(() => ({ docs: [] }))
   ]);
   const calc    = snapCalc.docs.map(d => ({ id: d.id, origemSistema: 'calculadora', ...d.data() }));
   const landing = snapLanding.docs.map(d => {

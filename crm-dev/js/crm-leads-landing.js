@@ -47,7 +47,7 @@ function brl(n) {
 // ── Firestore ──────────────────────────────────────────────
 async function setStatus(id, status) {
   try {
-    await updateDoc(doc(_db, 'lp_leads', id), { status });
+    await updateDoc(doc(_dbPrimario, 'lp_leads', id), { status });
   } catch (e) {
     console.error('[lp_leads] updateDoc:', e.message);
   }
