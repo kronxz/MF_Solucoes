@@ -46,6 +46,10 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('screen-app').style.display   = 'flex';
     document.getElementById('user-email-display').textContent = user.email;
     showPage('crm');                // Abre direto no CRM ao fazer login
+    // Marca somente o botão Dashboard CRM como ativo
+    document.querySelectorAll('.crm-nav-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.crm === 'dashboard')
+    );
     crmInit('dashboard');           // Seção inicial: Dashboard CRM
     console.log('[MFControl] Sessão ativa:', user.email);
   } else {
@@ -73,14 +77,11 @@ document.querySelectorAll('.nav-btn:not(.crm-nav-btn)').forEach(btn => {
 document.querySelectorAll('.crm-nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const section = btn.dataset.crm;
-    // Marca apenas os botões CRM do mesmo grupo como ativos
+    showPage('crm');   // showPage primeiro (mostra a página e limpa ativos)
+    // Corrige: marcar somente a seção clicada como ativa
     document.querySelectorAll('.crm-nav-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.crm === section)
     );
-    document.querySelectorAll('.nav-btn:not(.crm-nav-btn)').forEach(b =>
-      b.classList.remove('active')
-    );
-    showPage('crm');
     crmInit(section);
   });
 });

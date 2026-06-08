@@ -9,16 +9,16 @@ const CRM_URL = 'https://mf-solucoes-crm.web.app';
 
 // Mapeamento seção → seletor do botão no CRM DOM
 const SECAO_BTN = {
-  dashboard:   null,           // página inicial da URL
+  dashboard:   null,              // página inicial — sem clique, já está no estado default
   leads:       '#btn-leads',
   visitas:     '#btn-visitas',
   instalacoes: '#btn-instalacoes',
   tecnico:     '#btn-tecnico',
   financeiro:  '#btn-financeiro',
   notificacoes:'#btn-notificacoes',
-  estatisticas:'#btn-estatisticas',
+  estatisticas:'#btn-stats',      // CRM usa #btn-stats (não #btn-estatisticas)
   analytics:   '#btn-analytics',
-  qr:          '#btn-qr',
+  qr:          '#btn-qrcodes',    // CRM usa #btn-qrcodes (não #btn-qr)
 };
 
 const SECAO_LABEL = {
