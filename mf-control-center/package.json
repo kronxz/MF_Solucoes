@@ -55,6 +55,6 @@
     "electron-builder": "^24.13.3"
   },
   "dependencies": {
-    "archiver": "^8.0.0"
+    "archiver": "^6.0.2"
   }
 }
