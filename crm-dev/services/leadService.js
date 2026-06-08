@@ -94,6 +94,8 @@ export async function criarLeadBase(nome, telefone) {
         }
 
         const utm = getUTM();
+        // FIX: getUTM() retorna {} quando localStorage não tem 'utmData'
+        // Todos os campos utm.* podem ser undefined — fallback '' em cada um
         const leadData = {
             nome: dadosValidados.nome,
             telefone: dadosValidados.telefone,
@@ -101,15 +103,15 @@ export async function criarLeadBase(nome, telefone) {
             status: 'Novo',
             score: 0,
             temperatura: 'Fria',
-            utm_source: utm.source,
-            utm_medium: utm.medium,
-            utm_campaign: utm.campaign,
-            fbclid: utm.fbclid,
-            gclid: utm.gclid,
-            sessionId: utm.sessionId,
-            bairroQR: utm.bairroQR,
-            dispositivo: utm.dispositivo,
-            pagina_origem: utm.pagina,
+            utm_source:    utm.source      || '',
+            utm_medium:    utm.medium      || '',
+            utm_campaign:  utm.campaign    || '',
+            fbclid:        utm.fbclid      || '',
+            gclid:         utm.gclid       || '',
+            sessionId:     utm.sessionId   || '',
+            bairroQR:      utm.bairroQR    || '',
+            dispositivo:   utm.dispositivo || '',
+            pagina_origem: utm.pagina      || '',
             createdAt: serverTimestamp(),
             lastAction: serverTimestamp(),
             ultima_acao_nome: 'Deixou Contato'
