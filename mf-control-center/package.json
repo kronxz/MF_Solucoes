@@ -29,6 +29,9 @@
     "extraResources": [],
     "win": {
       "icon": "assets/logo.ico",
+      "sign": null,
+      "signDlls": false,
+      "verifyUpdateCodeSignature": false,
       "target": [
         {
           "target": "nsis",
