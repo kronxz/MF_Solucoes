@@ -13,6 +13,7 @@
     "appId": "com.mfsolucoes.controlcenter",
     "productName": "MF Control Center",
     "copyright": "Copyright 2026 MF Soluções Elétricas",
+    "icon": "assets/logo",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -22,32 +23,43 @@
       "preload.js",
       "renderer/**/*",
       "assets/**/*",
+      "services/**/*",
       "package.json"
     ],
+    "extraResources": [],
     "win": {
+      "icon": "assets/logo.ico",
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         },
         {
           "target": "portable",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
-      ]
+      ],
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/logo.ico",
+      "uninstallerIcon": "assets/logo.ico",
+      "installerHeaderIcon": "assets/logo.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "MF Control Center"
-    }
+      "shortcutName": "MF Control Center",
+      "menuCategory": "MF Soluções",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["pt_BR"],
+      "language": "1046"
+    },
+    "portable": {
+      "artifactName": "MF-Control-Center-Portable-${version}.exe"
+    },
+    "publish": null
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

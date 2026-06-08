@@ -15,7 +15,7 @@ export async function dashboardInit() {
   if (_iniciado) return;
   _iniciado = true;
 
-  const container = document.getElementById('page-dashboard');
+  const container = document.getElementById('page-mfcc-dashboard');
   if (!container) return;
 
   container.innerHTML = `

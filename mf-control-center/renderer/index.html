@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' https:;
+    content="default-src 'self' https: file:;
              script-src 'self' https://www.gstatic.com 'unsafe-inline';
              style-src 'self' 'unsafe-inline';
-             connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com;">
+             connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com;
+             frame-src https://mf-solucoes-crm.web.app https://mf-solucoes-crm.firebaseapp.com file:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MF Control Center</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════════
+  <!-- ══════════════════════════════════════════
        TELA DE LOGIN
-  ═══════════════════════════════════════════ -->
+  ══════════════════════════════════════════ -->
   <div id="screen-login" class="screen">
     <div class="login-bg">
       <div class="login-card">
@@ -58,9 +59,9 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════
+  <!-- ══════════════════════════════════════════
        APP PRINCIPAL (após login)
-  ═══════════════════════════════════════════ -->
+  ══════════════════════════════════════════ -->
   <div id="screen-app" class="screen" style="display:none">
 
     <!-- Sidebar -->
@@ -71,12 +72,57 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Módulos">
-        <button class="nav-btn active" data-page="dashboard">
+
+        <!-- ── CRM OPERACIONAL ─────────────────── -->
+        <div class="nav-group">CRM OPERACIONAL</div>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="dashboard">
           <span class="nav-icon">📊</span> Dashboard
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="leads">
+          <span class="nav-icon">👥</span> Leads
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="visitas">
+          <span class="nav-icon">📍</span> Visitas
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="instalacoes">
+          <span class="nav-icon">⚡</span> Instalações
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="tecnico">
+          <span class="nav-icon">🔧</span> Área Técnica
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="financeiro">
+          <span class="nav-icon">💰</span> Financeiro
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="notificacoes">
+          <span class="nav-icon">🔔</span> Notificações
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="estatisticas">
+          <span class="nav-icon">📈</span> Estatísticas
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="analytics">
+          <span class="nav-icon">📉</span> Analytics
+        </button>
+        <button class="nav-btn crm-nav-btn" data-page="crm" data-crm="qr">
+          <span class="nav-icon">📱</span> QR Codes
+        </button>
+
+        <!-- ── PROPOSTAS ──────────────────────── -->
+        <div class="nav-group">PROPOSTAS</div>
+        <button class="nav-btn" data-page="propostas">
+          <span class="nav-icon">📄</span> Propostas
+        </button>
+
+        <!-- ── CONTROLE ───────────────────────── -->
+        <div class="nav-group">CONTROLE</div>
+        <button class="nav-btn" data-page="mfcc-dashboard">
+          <span class="nav-icon">🖥️</span> MF Dashboard
         </button>
         <button class="nav-btn" data-page="backup">
           <span class="nav-icon">💾</span> Backup Center
         </button>
+
+        <!-- ── FERRAMENTAS ────────────────────── -->
+        <div class="nav-group">FERRAMENTAS</div>
         <button class="nav-btn" data-page="recovery">
           <span class="nav-icon">🔄</span> Recovery Center
         </button>
@@ -90,8 +136,15 @@
           <span class="nav-icon">❤️</span> Health Check
         </button>
         <button class="nav-btn" data-page="devtools">
-          <span class="nav-icon">🛠️</span> Developer Tools
+          <span class="nav-icon">🛠️</span> Dev Tools
         </button>
+
+        <!-- ── SISTEMA ────────────────────────── -->
+        <div class="nav-group">SISTEMA</div>
+        <button class="nav-btn" data-page="updates">
+          <span class="nav-icon">🔔</span> Atualizações
+        </button>
+
       </nav>
 
       <div class="sidebar-footer">
@@ -103,62 +156,109 @@
     <!-- Conteúdo Principal -->
     <main class="main-content" role="main">
 
-      <div id="page-dashboard" class="page">
+      <!-- ── CRM OPERACIONAL — webview ──────── -->
+      <div id="page-crm" class="page page-webview" style="display:none">
+        <div id="crm-toolbar" class="webview-toolbar">
+          <span id="crm-section-label" class="webview-label">⚡ CRM — Carregando...</span>
+          <div class="webview-actions">
+            <button id="crm-reload" class="btn-wv-action" title="Recarregar">↻</button>
+            <button id="crm-devtools" class="btn-wv-action" title="DevTools">🛠️</button>
+            <button id="crm-external" class="btn-wv-action" title="Abrir no navegador">↗</button>
+          </div>
+        </div>
+        <webview
+          id="crm-webview"
+          src="https://mf-solucoes-crm.web.app"
+          partition="persist:crm"
+          allowpopups
+        ></webview>
+      </div>
+
+      <!-- ── PROPOSTAS — webview ────────────── -->
+      <div id="page-propostas" class="page page-webview" style="display:none">
+        <div class="webview-toolbar">
+          <span class="webview-label">📄 Propostas MF Soluções</span>
+          <div class="webview-actions">
+            <button id="prop-nova"     class="btn-wv-action btn-wv-primary">+ Nova</button>
+            <button id="prop-reload"   class="btn-wv-action" title="Recarregar">↻</button>
+            <button id="prop-external" class="btn-wv-action" title="Abrir no navegador">↗</button>
+          </div>
+        </div>
+        <webview
+          id="propostas-webview"
+          partition="persist:crm"
+          allowpopups
+        ></webview>
+      </div>
+
+      <!-- ── MF DASHBOARD ───────────────────── -->
+      <div id="page-mfcc-dashboard" class="page" style="display:none">
         <div class="page-loading">Carregando Dashboard...</div>
       </div>
 
+      <!-- ── BACKUP CENTER ──────────────────── -->
       <div id="page-backup" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">💾</span>
           <h2>Backup Center</h2>
-          <p>Exportação manual do Firestore, Rules e código.</p>
-          <span class="badge-fase">FASE CC-2</span>
+          <p>Exportação segura — Firestore, Rules, CRM, Landing.</p>
+          <span class="badge-fase">CC-2 ✅</span>
         </div>
       </div>
 
+      <!-- ── RECOVERY CENTER ────────────────── -->
       <div id="page-recovery" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">🔄</span>
           <h2>Recovery Center</h2>
           <p>Restauração completa do ambiente V1.2.</p>
-          <span class="badge-fase">FASE CC-3</span>
+          <span class="badge-fase">CC-4</span>
         </div>
       </div>
 
+      <!-- ── GIT RECOVERY ───────────────────── -->
       <div id="page-git" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">🌿</span>
           <h2>Git Recovery</h2>
           <p>Checkout de tags, branches e commits anteriores.</p>
-          <span class="badge-fase">FASE CC-4</span>
+          <span class="badge-fase">CC-5</span>
         </div>
       </div>
 
+      <!-- ── FIRESTORE MANAGER ──────────────── -->
       <div id="page-firestore" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">🔥</span>
           <h2>Firestore Manager</h2>
           <p>Visualização e exportação de coleções.</p>
-          <span class="badge-fase">FASE CC-5</span>
+          <span class="badge-fase">CC-6</span>
         </div>
       </div>
 
+      <!-- ── HEALTH CHECK ───────────────────── -->
       <div id="page-health" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">❤️</span>
           <h2>Health Check</h2>
           <p>Verificação automática de 9 pontos críticos do sistema.</p>
-          <span class="badge-fase">FASE CC-6</span>
+          <span class="badge-fase">CC-7</span>
         </div>
       </div>
 
+      <!-- ── DEV TOOLS ──────────────────────── -->
       <div id="page-devtools" class="page" style="display:none">
         <div class="stub-page">
           <span class="stub-icon">🛠️</span>
           <h2>Developer Tools</h2>
           <p>Console, logs e ferramentas de diagnóstico.</p>
-          <span class="badge-fase">FASE CC-7</span>
+          <span class="badge-fase">CC-8</span>
         </div>
+      </div>
+
+      <!-- ── ATUALIZAÇÕES ───────────────────── -->
+      <div id="page-updates" class="page" style="display:none">
+        <div class="page-loading">Carregando Atualizações...</div>
       </div>
 
     </main>

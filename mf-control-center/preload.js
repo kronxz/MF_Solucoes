@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('MFControl', {
   // Utilitários do app
   getVersion:    () => ipcRenderer.invoke('app:version'),
   getPlatform:   () => ipcRenderer.invoke('app:platform'),
+  getPaths:      () => ipcRenderer.invoke('app:paths'),
   openExternal:  (url) => ipcRenderer.invoke('shell:openExternal', url),
 
   // File System (listagem)

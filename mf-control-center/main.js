@@ -18,10 +18,11 @@ function createWindow() {
     minWidth:  1024,
     minHeight: 680,
     webPreferences: {
-      preload:         path.join(__dirname, 'preload.js'),
+      preload:          path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration:  false,
       webSecurity:      true,
+      webviewTag:       true,   // habilita <webview> para o CRM embutido
     },
     backgroundColor: '#0f172a',
     title:           'MF Control Center',
@@ -53,6 +54,10 @@ app.on('window-all-closed', () => {
 // ─── IPC: Utilitários ──────────────────────────────────────────────────────────
 ipcMain.handle('app:version',  () => app.getVersion());
 ipcMain.handle('app:platform', () => process.platform);
+ipcMain.handle('app:paths',    () => ({
+  root: BACKUP_ROOT,
+  crm:  path.join(BACKUP_ROOT, 'crm-dev'),
+}));
 
 ipcMain.handle('shell:openExternal', (_e, url) => {
   if (url.startsWith('https://') || url.startsWith('http://')) {
