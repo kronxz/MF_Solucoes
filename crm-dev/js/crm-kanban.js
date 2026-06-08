@@ -380,7 +380,8 @@ async function novoLead() {
   const investimento = prompt('Valor do sistema (R$):');
   const kwp = prompt('Potência do sistema (kWp):');
 
-  const utm = JSON.parse(localStorage.getItem('utm') || '{}');
+  // FIX: chave correta é 'utmData' (utm.js usa setItem('utmData',...))
+  const utm = JSON.parse(localStorage.getItem('utmData') || '{}');
   const kit = JSON.parse(localStorage.getItem('kitSelecionado') || '{}');
 
   const uid = getAuth(app).currentUser?.uid || null;
@@ -391,7 +392,9 @@ async function novoLead() {
 
   const tel = String(telefone || '').replace(/\D/g, '');
 
-  await addDoc(collection(_db, 'leads'), {
+  // FIX: sanitizar payload — remover qualquer campo undefined antes do addDoc
+  // createdAt: serverTimestamp() é preservado (não é undefined)
+  const _payload = {
     nome, telefone, telefoneDigitos: tel, valor,
     sistema: kit?.sistema || '-',
     investimento: kit?.investimento || investimento || 0,
@@ -408,10 +411,14 @@ async function novoLead() {
     data: new Date().toISOString(),
     criadoEm: new Date().toISOString(),
     createdAt: serverTimestamp(),
-    utm_source: utm.source,
-    utm_campaign: utm.campaign,
-    utm_medium: utm.medium
-  });
+    utm_source:   utm.source   || '',
+    utm_campaign: utm.campaign || '',
+    utm_medium:   utm.medium   || ''
+  };
+  const payloadLimpo = Object.fromEntries(
+    Object.entries(_payload).filter(([_, v]) => v !== undefined)
+  );
+  await addDoc(collection(_db, 'leads'), payloadLimpo);
 }
 
 // ─── MOBILE KANBAN TABS ───────────────────────────────────────
