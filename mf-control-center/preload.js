@@ -37,4 +37,14 @@ contextBridge.exposeInMainWorld('MFControl', {
     tags:   () => ipcRenderer.invoke('git:tags'),
   },
 
+  // Recovery Center
+  recovery: {
+    scan:     ()            => ipcRenderer.invoke('recovery:scan'),
+    health:   ()            => ipcRenderer.invoke('recovery:health'),
+    dryRun:   (type)        => ipcRenderer.invoke('recovery:dryRun', type),
+    restore:  (opts)        => ipcRenderer.invoke('recovery:restore', opts),
+    writeLog: (entry)       => ipcRenderer.invoke('recovery:writeLog', entry),
+    readLog:  ()            => ipcRenderer.invoke('recovery:readLog'),
+  },
+
 });

@@ -273,6 +273,271 @@ ipcMain.handle('backup:completo', async (_e, jsonData) => {
   }
 });
 
+// ─── IPC: Recovery Center ─────────────────────────────────────────────────────
+const yauzl      = require('yauzl');
+const extractZip = require('extract-zip');
+
+const BACKUPS_V1_2 = {
+  crm:       'BACKUP_CRM_V1_2.zip',
+  landing:   'BACKUP_LANDING_V1_2.zip',
+  firestore: 'BACKUP_FIRESTORE_V1_2.zip',
+  rules:     'BACKUP_RULES_V1_2.zip',
+};
+
+/** Valida ZIP: magic bytes + lista entradas via yauzl */
+function validarZip(zipPath) {
+  return new Promise((resolve) => {
+    if (!fs.existsSync(zipPath)) {
+      return resolve({ ok: false, status: 'ausente', reason: 'Arquivo não encontrado', entries: [], size: 0 });
+    }
+    const stat = fs.statSync(zipPath);
+    try {
+      const buf = Buffer.alloc(4);
+      const fd  = fs.openSync(zipPath, 'r');
+      fs.readSync(fd, buf, 0, 4, 0);
+      fs.closeSync(fd);
+      if (buf.slice(0, 2).toString('hex') !== '504b') {
+        return resolve({ ok: false, status: 'corrompido', reason: 'Magic inválido', entries: [], size: stat.size });
+      }
+    } catch (e) {
+      return resolve({ ok: false, status: 'corrompido', reason: e.message, entries: [], size: stat.size });
+    }
+
+    yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return resolve({ ok: false, status: 'corrompido', reason: err.message, entries: [], size: stat.size });
+      const entries = [];
+      zipfile.readEntry();
+      zipfile.on('entry', (e) => { entries.push(e.fileName); zipfile.readEntry(); });
+      zipfile.on('end',   () => resolve({ ok: true, status: 'ok', entries, size: stat.size }));
+      zipfile.on('error', (e) => resolve({ ok: false, status: 'corrompido', reason: e.message, entries, size: stat.size }));
+    });
+  });
+}
+
+/** FASE 1 — Scan: existência + tamanho */
+ipcMain.handle('recovery:scan', async () => {
+  const result = {};
+  for (const [type, filename] of Object.entries(BACKUPS_V1_2)) {
+    const p = path.join(BACKUP_ROOT, filename);
+    const exists = fs.existsSync(p);
+    result[type] = { filename, exists, size: exists ? fs.statSync(p).size : 0, path: p };
+  }
+  // Firestore JSON extra
+  const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V1_2.json');
+  result.firestore.jsonExists = fs.existsSync(jsonPath);
+  result.firestore.jsonSize   = result.firestore.jsonExists ? fs.statSync(jsonPath).size : 0;
+  return result;
+});
+
+/** FASE 3 — Health Check: valida ZIP + verifica arquivos obrigatórios */
+ipcMain.handle('recovery:health', async () => {
+  const health = {};
+  const required = {
+    crm:       ['crm-dev/proposta.html'],
+    landing:   ['index.html'],
+    firestore: ['.json'],   // qualquer JSON
+    rules:     ['firestore.rules'],
+  };
+
+  for (const [type, filename] of Object.entries(BACKUPS_V1_2)) {
+    const p = path.join(BACKUP_ROOT, filename);
+    const v = await validarZip(p);
+    health[type] = { ...v };
+
+    if (v.ok) {
+      const reqs = required[type];
+      const missing = reqs.filter(r =>
+        !v.entries.some(e => r.startsWith('.') ? e.endsWith(r) : e.includes(r))
+      );
+      health[type].requiredFiles = reqs;
+      health[type].missingFiles  = missing;
+      health[type].structureOk   = missing.length === 0;
+    }
+
+    // Validação extra JSON para Firestore
+    if (type === 'firestore' && v.ok) {
+      const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V1_2.json');
+      if (fs.existsSync(jsonPath)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+          const cols = Object.keys(parsed.collections || {});
+          health[type].jsonValid = true;
+          health[type].jsonCols  = cols.length;
+          health[type].jsonColNames = cols;
+        } catch (e) {
+          health[type].jsonValid = false;
+          health[type].jsonError = e.message;
+        }
+      }
+    }
+
+    // Validação conteúdo rules
+    if (type === 'rules' && v.ok) {
+      health[type].hasFirestoreRules = v.entries.some(e => e.includes('firestore.rules'));
+      health[type].hasFirebaseJson   = v.entries.some(e => e.includes('firebase.json'));
+    }
+  }
+  return health;
+});
+
+/** FASE 4 — Dry Run: simula o que seria restaurado */
+ipcMain.handle('recovery:dryRun', async (_e, type) => {
+  const filename = BACKUPS_V1_2[type];
+  if (!filename) return { ok: false, reason: 'Tipo desconhecido: ' + type };
+
+  const zipPath = path.join(BACKUP_ROOT, filename);
+  const v = await validarZip(zipPath);
+  if (!v.ok) return { ok: false, reason: v.reason, status: v.status };
+
+  const plan = { ok: true, type, filename, size: v.size, totalEntries: v.entries.length, entries: v.entries.slice(0, 50), targets: [], warnings: [], description: '' };
+
+  switch (type) {
+    case 'rules':
+      plan.targets = ['firestore.rules', 'firebase.json', 'firestore.indexes.json', 'storage.rules']
+        .filter(f => v.entries.some(e => e.includes(f)))
+        .map(f => path.join(BACKUP_ROOT, f));
+      plan.description = 'Sobrescreve arquivos de regras na raiz do projeto';
+      plan.warnings = ['firestore.rules atual será sobrescrito', 'firebase.json atual será sobrescrito'];
+      break;
+    case 'firestore':
+      plan.targets = ['Firebase Firestore PROD (via Firebase CLI)'];
+      plan.description = 'Extrai BACKUP_FIRESTORE_V1_2.json e disponibiliza para import via Firebase CLI';
+      plan.warnings = [
+        'NÃO altera o Firestore diretamente',
+        'Requer: firebase firestore:delete --all-collections',
+        'Requer: firebase emulators:import (ou importação manual)',
+      ];
+      break;
+    case 'crm':
+      plan.targets = [path.join(BACKUP_ROOT, 'crm-dev')];
+      plan.description = 'Substitui crm-dev/ pelo conteúdo do backup (backup do atual criado antes)';
+      plan.warnings = ['crm-dev/ atual será movido para crm-dev_PRE_RECOVERY_<ts>', 'Electron precisará ser reiniciado após restore'];
+      break;
+    case 'landing':
+      plan.targets = ['index.html', 'css/', 'js/', 'src/', 'docs/'].map(f => path.join(BACKUP_ROOT, f));
+      plan.description = 'Substitui arquivos da Landing Page na raiz do projeto';
+      plan.warnings = ['index.html atual será sobrescrito', 'Pastas css/, js/, src/, docs/ serão substituídas', 'Requer push para GitHub Pages após restore'];
+      break;
+  }
+
+  return plan;
+});
+
+/**
+ * FASE 5 — Restore Engine
+ * ⚠️  CC-4 LOCK: restore real bloqueado até CC-4.1
+ * As funções estão implementadas mas RECOVERY_LOCKED=true
+ */
+const RECOVERY_LOCKED = true; // Remover em CC-4.1 após certificação
+
+ipcMain.handle('recovery:restore', async (_e, { type, confirm1, confirm2, confirm3 }) => {
+  // Fase 6 — Tripla confirmação
+  if (confirm1 !== 'confirmed')    return { ok: false, reason: 'Confirmação 1 inválida' };
+  if (confirm2 !== 'RESTAURAR')    return { ok: false, reason: 'Confirmação 2 inválida — digite RESTAURAR', hint: 'RESTAURAR' };
+  if (confirm3 !== 'V1.2_PRODUCAO') return { ok: false, reason: 'Confirmação 3 inválida — digite V1.2_PRODUCAO', hint: 'V1.2_PRODUCAO' };
+
+  // CC-4 LOCK
+  if (RECOVERY_LOCKED) {
+    return { ok: false, locked: true, reason: 'CC-4 LOCK ativo — restauração real liberada em CC-4.1 após certificação completa.' };
+  }
+
+  // ── Abaixo: código pronto para CC-4.1 ──
+  const filename = BACKUPS_V1_2[type];
+  if (!filename) return { ok: false, reason: 'Tipo inválido: ' + type };
+
+  const zipPath = path.join(BACKUP_ROOT, filename);
+  if (!fs.existsSync(zipPath)) return { ok: false, reason: 'Backup não encontrado: ' + filename };
+
+  const tmpDir = path.join(os.tmpdir(), 'mf_recovery_' + Date.now());
+  try {
+    fs.mkdirSync(tmpDir, { recursive: true });
+    await extractZip(zipPath, { dir: tmpDir });
+
+    const restored = [];
+    const stamp    = Date.now();
+
+    switch (type) {
+      case 'rules': {
+        const ruleFiles = ['firestore.rules', 'firebase.json', 'firestore.indexes.json', 'storage.rules'];
+        for (const f of ruleFiles) {
+          const src  = path.join(tmpDir, f);
+          const dest = path.join(BACKUP_ROOT, f);
+          if (fs.existsSync(src)) { fs.copyFileSync(src, dest); restored.push(f); }
+        }
+        break;
+      }
+      case 'crm': {
+        const srcDir  = path.join(tmpDir, 'crm-dev');
+        if (!fs.existsSync(srcDir)) throw new Error('crm-dev/ não encontrado no ZIP');
+        const bkpDir  = path.join(BACKUP_ROOT, 'crm-dev_PRE_RECOVERY_' + stamp);
+        if (fs.existsSync(path.join(BACKUP_ROOT, 'crm-dev'))) {
+          fs.renameSync(path.join(BACKUP_ROOT, 'crm-dev'), bkpDir);
+          restored.push('Atual movido → ' + path.basename(bkpDir));
+        }
+        fs.renameSync(srcDir, path.join(BACKUP_ROOT, 'crm-dev'));
+        restored.push('crm-dev/ restaurado de ' + filename);
+        break;
+      }
+      case 'landing': {
+        const landingFiles = ['index.html', 'login.html', 'proposta.html'];
+        const landingDirs  = ['css', 'js', 'src', 'docs'];
+        for (const f of landingFiles) {
+          const src = path.join(tmpDir, f);
+          if (fs.existsSync(src)) { fs.copyFileSync(src, path.join(BACKUP_ROOT, f)); restored.push(f); }
+        }
+        for (const d of landingDirs) {
+          const src = path.join(tmpDir, d);
+          if (fs.existsSync(src)) {
+            const dest = path.join(BACKUP_ROOT, d);
+            if (fs.existsSync(dest)) fs.renameSync(dest, path.join(BACKUP_ROOT, d + '_PRE_RECOVERY_' + stamp));
+            fs.renameSync(src, dest);
+            restored.push(d + '/ restaurado');
+          }
+        }
+        break;
+      }
+      case 'firestore': {
+        const jsonFiles = fs.readdirSync(tmpDir).filter(f => f.endsWith('.json'));
+        for (const f of jsonFiles) {
+          const dest = path.join(BACKUP_ROOT, 'RESTORED_FIRESTORE_' + stamp + '.json');
+          fs.copyFileSync(path.join(tmpDir, f), dest);
+          restored.push('JSON extraído: ' + path.basename(dest) + ' — deploy via Firebase CLI');
+        }
+        break;
+      }
+    }
+
+    return { ok: true, type, restored };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  } finally {
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+  }
+});
+
+/** FASE 7 — Log */
+ipcMain.handle('recovery:writeLog', async (_e, entry) => {
+  try {
+    const logPath = path.join(BACKUP_ROOT, 'recovery.log');
+    const line    = JSON.stringify({ ...entry, ts: new Date().toISOString() }) + '\n';
+    fs.appendFileSync(logPath, line, 'utf-8');
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
+});
+
+ipcMain.handle('recovery:readLog', async () => {
+  try {
+    const logPath = path.join(BACKUP_ROOT, 'recovery.log');
+    if (!fs.existsSync(logPath)) return [];
+    return fs.readFileSync(logPath, 'utf-8')
+      .split('\n').filter(Boolean)
+      .map(l => { try { return JSON.parse(l); } catch { return { ts: '?', acao: l }; } })
+      .reverse();   // mais recentes primeiro
+  } catch { return []; }
+});
+
 // ─── IPC: Git ─────────────────────────────────────────────────────────────────
 // Usa execFile (sem shell) — sem interpolação de input do usuário
 const { execFile } = require('child_process');
