@@ -17,6 +17,7 @@ import { firestoreInit }  from './pages/firestore.js';
 import { crmInit }        from './pages/crm.js';
 import { propostasInit }  from './pages/propostas.js';
 import { updatesInit }    from './pages/updates.js';
+import { healthInit }     from './pages/health.js';
 
 // ─── Estado Global ─────────────────────────────────────────────────────────────
 window._mfUser   = null;
@@ -40,6 +41,7 @@ export function showPage(pageId) {
   if (pageId === 'recovery')       recoveryInit();
   if (pageId === 'git')            gitInit();
   if (pageId === 'firestore')      firestoreInit();
+  if (pageId === 'health')         healthInit();
   if (pageId === 'updates')        updatesInit();
 }
 
