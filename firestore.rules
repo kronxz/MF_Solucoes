@@ -1,94 +1,112 @@
 rules_version = '2';
 
-// MF Soluções CRM — Firestore Rules V1.0 Seguro
-// Auditado em: 2026-06-04
+// MF Soluções CRM — Firestore Rules V1.2 Hardened
+// Auditado em: 2026-06-08
 //
-// PRINCÍPIO:
-//   - CRM (usuário autenticado) pode ler e escrever tudo
-//   - Landing/Calculadora (público) pode APENAS criar novos documentos
-//     nas coleções designadas, com campos válidos
-//   - Ninguém público pode ler, listar, atualizar ou deletar
-//
-// PROTEÇÕES:
-//   - leads: acesso restrito ao CRM (auth obrigatória)
-//   - lp_leads: create público com validação de campos; resto = auth
-//   - eventos: create público com validação; resto = auth
-//   - landing_visits: create público; resto = auth
-//   - tudo mais: auth obrigatória
+// ALTERAÇÕES V1.2 vs V1.0:
+//   - lp_leads:          hasAny → hasAll(['nome','telefone','createdAt','sessionId'])
+//                        + type checks (nome/telefone/createdAt is string)
+//                        verificado em PROD: 5/5 docs com createdAt = string ISO
+//   - eventos:           adicionado 'criadoEm' ao hasAll + criadoEm is timestamp
+//                        verificado em PROD: 20/20 eventos com criadoEm = timestamp
+//   - landing_visits:    adicionado sessionId obrigatório + sessionId is string
+//   - returno_ao_site:   leitura pública removida (coleção sem uso em nenhum módulo)
+//   - tecnico_dados:     regra explícita adicionada (antes: coberto por fallback)
+//   - notificacoes_logs: regra explícita adicionada (antes: coberto por fallback)
+//   - leads, instalacoes, financeiro_dados, crm_config: inalterados
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── leads (Calculadora/CRM) ─────────────────────────────────
     // Apenas usuários autenticados do CRM.
-    // A calculadora envia leads já autenticada com o uid do admin.
     match /leads/{leadId} {
       allow read, write: if request.auth != null;
     }
 
-    // ── lp_leads (Landing Page) ─────────────────────────────────
-    // Visitantes podem CRIAR um lead (formulário da Landing).
-    // Apenas auth pode ler, atualizar ou deletar.
-    // Validação: ao menos um campo de identificação deve existir.
+    // ── lp_leads (Landing Page) — V1.2 ─────────────────────────
+    // V1.0: hasAny(['nome','telefone','sessionId']) + size<100
+    // V1.2: hasAll de 4 campos + type validation
+    //   - createdAt verificado em PROD: 5/5 = string ISO 8601
     match /lp_leads/{leadId} {
       allow create: if
-        // Campos mínimos obrigatórios
-        (request.resource.data.keys().hasAny(['nome', 'telefone', 'sessionId'])) &&
-        // Tamanho razoável (evita documentos gigantes)
+        request.resource.data.keys().hasAll(['nome', 'telefone', 'createdAt', 'sessionId']) &&
+        request.resource.data.nome is string &&
+        request.resource.data.telefone is string &&
+        request.resource.data.createdAt is string &&
         request.resource.data.size() < 100;
 
       allow read, update, delete: if request.auth != null;
     }
 
-    // ── eventos (Calculadora / Landing tracking) ────────────────
-    // Visitantes podem CRIAR eventos de rastreamento.
-    // Apenas auth pode ler ou deletar.
-    // Validação: campo 'evento' obrigatório + sessionId.
+    // ── eventos (Calculadora / Landing tracking) — V1.2 ────────
+    // V1.0: hasAll(['evento','sessionId']) + evento is string + size<50
+    // V1.2: adicionado criadoEm is timestamp
+    //   - criadoEm verificado em PROD: 20/20 = timestamp Firestore nativo
     match /eventos/{eventoId} {
       allow create: if
-        request.resource.data.keys().hasAll(['evento', 'sessionId']) &&
+        request.resource.data.keys().hasAll(['evento', 'sessionId', 'criadoEm']) &&
         request.resource.data.evento is string &&
         request.resource.data.evento.size() < 100 &&
+        request.resource.data.criadoEm is timestamp &&
         request.resource.data.size() < 50;
 
       allow read, update, delete: if request.auth != null;
     }
 
-    // ── landing_visits (QR Code / visitas) ──────────────────────
-    // Visitantes podem registrar visitas (QR code físico).
-    // Apenas auth pode ler.
+    // ── landing_visits (QR Code / visitas) — V1.2 ──────────────
+    // V1.0: apenas size()<50 (sem validação de campo)
+    // V1.2: sessionId obrigatório + sessionId is string
     match /landing_visits/{visitId} {
       allow create: if
+        request.resource.data.keys().hasAny(['sessionId']) &&
+        request.resource.data.sessionId is string &&
         request.resource.data.size() < 50;
 
       allow read, update, delete: if request.auth != null;
     }
 
-    // ── returno_ao_site ─────────────────────────────────────────
-    // Dados de retorno ao site — leitura pública, escrita auth.
+    // ── returno_ao_site — V1.2 ──────────────────────────────────
+    // V1.0: allow read: if true (leitura pública)
+    // V1.2: restrito a auth — coleção não utilizada em nenhum módulo
     match /returno_ao_site/{docId} {
-      allow read: if true;
-      allow create, update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
 
     // ── instalacoes ─────────────────────────────────────────────
+    // Inalterado.
     match /instalacoes/{docId} {
       allow read, write: if request.auth != null;
     }
 
     // ── financeiro_dados ────────────────────────────────────────
+    // Inalterado.
     match /financeiro_dados/{docId} {
       allow read, write: if request.auth != null;
     }
 
+    // ── tecnico_dados — V1.2 ────────────────────────────────────
+    // V1.0: coberto pelo fallback (sem regra explícita)
+    // V1.2: regra explícita
+    match /tecnico_dados/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── notificacoes_logs — V1.2 ────────────────────────────────
+    // V1.0: coberto pelo fallback (sem regra explícita)
+    // V1.2: regra explícita
+    match /notificacoes_logs/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
     // ── crm_config ──────────────────────────────────────────────
+    // Inalterado.
     match /crm_config/{docId} {
       allow read, write: if request.auth != null;
     }
 
     // ── Fallback global ─────────────────────────────────────────
-    // Qualquer outra coleção não listada: somente auth.
+    // Cobre coleções futuras não listadas. Somente auth.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
