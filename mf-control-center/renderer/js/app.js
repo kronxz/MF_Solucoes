@@ -13,6 +13,7 @@ import { dashboardInit }  from './pages/dashboard.js';
 import { backupInit }     from './pages/backup.js';
 import { recoveryInit }   from './pages/recovery.js';
 import { gitInit }        from './pages/git.js';
+import { firestoreInit }  from './pages/firestore.js';
 import { crmInit }        from './pages/crm.js';
 import { propostasInit }  from './pages/propostas.js';
 import { updatesInit }    from './pages/updates.js';
@@ -38,6 +39,7 @@ export function showPage(pageId) {
   if (pageId === 'backup')         backupInit();
   if (pageId === 'recovery')       recoveryInit();
   if (pageId === 'git')            gitInit();
+  if (pageId === 'firestore')      firestoreInit();
   if (pageId === 'updates')        updatesInit();
 }
 
