@@ -78,7 +78,10 @@ export function iniciarDetails(db) {
     if (_debounceObs) clearTimeout(_debounceObs);
     _debounceObs = setTimeout(async () => {
       try {
-        await updateDoc(doc(_db, 'leads', _leadAtualId), {
+        const leadObs = _leads.find(l => l.id === _leadAtualId);
+        const obsDb  = getLeadDb(leadObs);
+        const obsCol = getLeadCollection(leadObs);
+        await updateDoc(doc(obsDb, obsCol, _leadAtualId), {
           observacoes: obsBox.value,
           observacoesAtualizadoEm: new Date().toISOString()
         });
