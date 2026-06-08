@@ -1,0 +1,47 @@
+{
+  "name": "mf-control-center",
+  "version": "1.0.0",
+  "description": "MF Control Center — Central administrativa MF Soluções",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "build": "electron-builder --win",
+    "pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.mfsolucoes.controlcenter",
+    "productName": "MF Control Center",
+    "copyright": "Copyright 2026 MF Soluções Elétricas",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MF Control Center"
+    }
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  }
+}
