@@ -58,7 +58,9 @@ export function carregarInstalacoes(onUpdate) {
 const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao']);
 
 export function carregarLeadsMap(onUpdate) {
-  const q = query(collection(_db, 'leads'));
+  // orderBy('createdAt') exclui documentos sem o campo — idêntico ao comportamento do Kanban.
+  // Garante que leads fantasma (sem createdAt) não apareçam no dropdown de Instalações.
+  const q = query(collection(_db, 'leads'), orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snapshot) => {
     console.log('[INST_QUERY_SIZE]', snapshot.size);
     _leadsMap = {};
