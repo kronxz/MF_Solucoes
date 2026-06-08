@@ -10,9 +10,14 @@ const fs    = require('fs');
 
 const isDev = process.env.NODE_ENV === 'development';
 
+// ─── Ícone da aplicação ────────────────────────────────────────────────────────
+// Usa logo.ico (Windows). Fallback silencioso se arquivo não existir.
+const ICON_PATH = path.join(__dirname, 'assets', 'logo.ico');
+const ICON_EXISTS = fs.existsSync(ICON_PATH) && fs.statSync(ICON_PATH).size > 1024;
+
 // ─── Janela Principal ──────────────────────────────────────────────────────────
 function createWindow() {
-  const win = new BrowserWindow({
+  const winOptions = {
     width:     1280,
     height:    800,
     minWidth:  1024,
@@ -27,7 +32,12 @@ function createWindow() {
     backgroundColor: '#0f172a',
     title:           'MF Control Center',
     show:            false,
-  });
+  };
+
+  // Aplica ícone somente se logo.ico for um ICO real (> 1 KB)
+  if (ICON_EXISTS) winOptions.icon = ICON_PATH;
+
+  const win = new BrowserWindow(winOptions);
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 

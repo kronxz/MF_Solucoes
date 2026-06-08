@@ -1,6 +1,8 @@
 /**
  * health.js — MF Control Center
- * CC-7: Health Center — 10 verificações funcionais reais.
+ * CC-7 / CC-8 Health Center V2 — 10 verificações funcionais reais.
+ * Status: ✅ OK | ⚠️ AVISO | 🔴 CRÍTICO
+ * Recomendações automáticas por falha.
  * Nenhum stub. Nenhum placeholder. Verificações ao vivo.
  */
 
@@ -38,7 +40,7 @@ function _build() {
   hdr.innerHTML = `
     <div>
       <h2>❤️ Health Center</h2>
-      <p class="dash-sub">10 verificações funcionais ao vivo · CC-7</p>
+      <p class="dash-sub">10 verificações funcionais ao vivo · CC-8 V2</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span id="hc-summary" style="font-size:12px;color:#94a3b8;">⟳ Verificando...</span>
@@ -46,6 +48,12 @@ function _build() {
     </div>
   `;
   container.appendChild(hdr);
+
+  // Painel de recomendações (aparece só se houver críticos/avisos)
+  const recBox = document.createElement('div');
+  recBox.id = 'hc-recommendations';
+  recBox.style.cssText = 'display:none;margin:10px 0;background:#1a0a0a;border:1px solid #7f1d1d;border-radius:6px;padding:10px 14px;';
+  container.appendChild(recBox);
 
   // Grid de checks
   const grid = document.createElement('div');
@@ -59,6 +67,8 @@ function _build() {
 }
 
 // ── Definição dos 10 checks ───────────────────────────────────────────────────
+// status: 'ok' | 'warn' | 'critico'
+// rec: recomendação automática (aparece no painel superior quando status != ok)
 const CHECKS = [
   {
     id: 'firebase-auth',
@@ -67,13 +77,25 @@ const CHECKS = [
     desc: 'Sessão ativa e token válido',
     run: async () => {
       const user = auth.currentUser;
-      if (!user) return { status: 'error', detail: 'Nenhum usuário autenticado' };
+      if (!user) return {
+        status: 'critico',
+        detail: 'Nenhum usuário autenticado',
+        rec: 'Firebase Auth falhou → faça login novamente ou verifique conexão com internet.',
+      };
       try {
-        const token = await user.getIdToken(true); // force refresh
-        if (!token) return { status: 'error', detail: 'Token inválido' };
+        const token = await user.getIdToken(true);
+        if (!token) return {
+          status: 'critico',
+          detail: 'Token inválido ou expirado',
+          rec: 'Token Firebase expirado → saia e entre novamente na conta.',
+        };
         return { status: 'ok', detail: `Autenticado: ${user.email}` };
       } catch (e) {
-        return { status: 'warn', detail: 'Token refresh falhou: ' + e.message.slice(0, 60) };
+        return {
+          status: 'warn',
+          detail: 'Token refresh falhou: ' + e.message.slice(0, 60),
+          rec: 'Renovação de token falhou → verifique conexão e tente recarregar.',
+        };
       }
     },
   },
@@ -88,8 +110,11 @@ const CHECKS = [
         const n = snap.data().count;
         return { status: 'ok', detail: `lp_leads: ${n} documento${n !== 1 ? 's' : ''}` };
       } catch (e) {
-        // Tenta fallback com getDocs
-        return { status: 'warn', detail: 'getCountFromServer: ' + e.message.slice(0, 60) };
+        return {
+          status: 'critico',
+          detail: 'Firestore inacessível: ' + e.message.slice(0, 55),
+          rec: 'Firestore indisponível → verifique regras de segurança e conexão com internet.',
+        };
       }
     },
   },
@@ -107,10 +132,22 @@ const CHECKS = [
         if (res.ok || res.status === 301 || res.status === 302 || res.status === 200) {
           return { status: 'ok', detail: `HTTP ${res.status} — ${CRM_URL.slice(8, 40)}` };
         }
-        return { status: 'warn', detail: `HTTP ${res.status} inesperado` };
+        return {
+          status: 'warn',
+          detail: `HTTP ${res.status} inesperado`,
+          rec: `CRM retornou HTTP ${res.status} → verifique deploy no Firebase Hosting.`,
+        };
       } catch (e) {
-        if (e.name === 'AbortError') return { status: 'error', detail: 'Timeout (6s) — sem resposta' };
-        return { status: 'error', detail: e.message.slice(0, 70) };
+        if (e.name === 'AbortError') return {
+          status: 'critico',
+          detail: 'Timeout (6s) — CRM sem resposta',
+          rec: 'CRM offline (timeout) → verifique internet ou status do Firebase Hosting.',
+        };
+        return {
+          status: 'critico',
+          detail: e.message.slice(0, 70),
+          rec: 'CRM inacessível → verifique internet e status do Firebase.',
+        };
       }
     },
   },
@@ -121,16 +158,24 @@ const CHECKS = [
     desc: 'Webview carregado e responsivo',
     run: async () => {
       const wv = document.getElementById('crm-webview');
-      if (!wv) return { status: 'error', detail: 'Elemento crm-webview não encontrado' };
+      if (!wv) return {
+        status: 'critico',
+        detail: 'Elemento crm-webview não encontrado no DOM',
+        rec: 'Webview CRM ausente → reinicie o aplicativo.',
+      };
       const url = wv.getURL?.() || '';
       if (!url.startsWith(CRM_URL)) {
-        return { status: 'warn', detail: 'Webview não carregado — URL: ' + (url.slice(0, 40) || '(vazio)') };
+        return {
+          status: 'warn',
+          detail: 'Webview não carregado — acesse CRM primeiro',
+          rec: 'Clique em "Dashboard" no menu para carregar o CRM.',
+        };
       }
       try {
         const title = await wv.executeJavaScript('document.title');
         return { status: 'ok', detail: `Carregado · "${(title || '').slice(0, 40)}"` };
-      } catch (e) {
-        return { status: 'warn', detail: 'Carregado mas executeJavaScript falhou' };
+      } catch {
+        return { status: 'warn', detail: 'Carregado mas executeJavaScript restrito' };
       }
     },
   },
@@ -148,10 +193,22 @@ const CHECKS = [
         if (res.ok || res.status === 200) {
           return { status: 'ok', detail: `HTTP ${res.status} · GitHub Pages ativo` };
         }
-        return { status: 'warn', detail: `HTTP ${res.status} · ${LANDING_URL.slice(0, 40)}` };
+        return {
+          status: 'warn',
+          detail: `HTTP ${res.status} · verificar GitHub Pages`,
+          rec: `GitHub Pages retornou ${res.status} → verifique configuração em github.com/kronxz/mf-solucoes-eletricas.`,
+        };
       } catch (e) {
-        if (e.name === 'AbortError') return { status: 'error', detail: 'Timeout (8s) — GitHub Pages sem resposta' };
-        return { status: 'error', detail: e.message.slice(0, 70) };
+        if (e.name === 'AbortError') return {
+          status: 'critico',
+          detail: 'Timeout (8s) — Landing Page sem resposta',
+          rec: 'Landing Page offline → verifique GitHub Pages em github.com/kronxz/mf-solucoes-eletricas/settings.',
+        };
+        return {
+          status: 'warn',
+          detail: e.message.slice(0, 70),
+          rec: 'Landing Page inacessível → verifique conexão ou status do GitHub.',
+        };
       }
     },
   },
@@ -163,15 +220,31 @@ const CHECKS = [
     run: async () => {
       try {
         const list = await window.MFControl?.listBackups?.();
-        if (!list) return { status: 'warn', detail: 'IPC listBackups não disponível' };
-        if (list.error) return { status: 'error', detail: list.error.slice(0, 60) };
+        if (!list) return {
+          status: 'warn',
+          detail: 'IPC listBackups não disponível',
+          rec: 'Backup Center IPC não registrado → reinicie o MF Control Center.',
+        };
+        if (list.error) return {
+          status: 'critico',
+          detail: list.error.slice(0, 60),
+          rec: 'Erro na pasta de backups → verifique permissões do diretório.',
+        };
         const count = Array.isArray(list) ? list.length : 0;
-        if (count === 0) return { status: 'warn', detail: 'Nenhum backup encontrado na pasta local' };
+        if (count === 0) return {
+          status: 'warn',
+          detail: 'Nenhum backup encontrado na pasta local',
+          rec: 'Sem backups locais → acesse Backup Center e execute um backup completo.',
+        };
         const recent = list[list.length - 1];
         const name = typeof recent === 'string' ? recent.split(/[\\/]/).pop() : JSON.stringify(recent).slice(0, 40);
         return { status: 'ok', detail: `${count} backup${count !== 1 ? 's' : ''} · Recente: ${name.slice(0, 45)}` };
       } catch (e) {
-        return { status: 'error', detail: e.message.slice(0, 70) };
+        return {
+          status: 'warn',
+          detail: e.message.slice(0, 70),
+          rec: 'Erro ao acessar backups → reinicie o aplicativo.',
+        };
       }
     },
   },
@@ -183,8 +256,16 @@ const CHECKS = [
     run: async () => {
       try {
         const result = await window.MFControl?.recovery?.health?.();
-        if (!result) return { status: 'warn', detail: 'IPC não registrado — reiniciar Electron' };
-        if (result.error) return { status: 'warn', detail: result.error.slice(0, 60) };
+        if (!result) return {
+          status: 'warn',
+          detail: 'IPC não registrado',
+          rec: 'Recovery Center IPC inativo → reinicie o MF Control Center para ativar.',
+        };
+        if (result.error) return {
+          status: 'warn',
+          detail: result.error.slice(0, 60),
+          rec: 'Recovery Center com erro → verifique integridade do sistema.',
+        };
         const locked = result.locked ?? result.RECOVERY_LOCKED ?? true;
         return {
           status: 'ok',
@@ -193,9 +274,17 @@ const CHECKS = [
       } catch (e) {
         const msg = e.message || String(e);
         if (msg.includes('No handler') || msg.includes('not registered')) {
-          return { status: 'warn', detail: '⚠️ IPC não registrado — reiniciar Electron para ativar' };
+          return {
+            status: 'warn',
+            detail: 'IPC não registrado — reiniciar Electron para ativar',
+            rec: 'Recovery IPC inativo → reinicie o MF Control Center.',
+          };
         }
-        return { status: 'error', detail: msg.slice(0, 70) };
+        return {
+          status: 'warn',
+          detail: msg.slice(0, 70),
+          rec: 'Erro no Recovery Center → reinicie o aplicativo.',
+        };
       }
     },
   },
@@ -207,9 +296,16 @@ const CHECKS = [
     run: async () => {
       try {
         const result = await window.MFControl?.git?.statusFull?.();
-        if (!result) return { status: 'warn', detail: 'IPC não registrado — reiniciar Electron' };
-        if (result.error) return { status: 'warn', detail: result.error.slice(0, 60) };
-        // result.stdout should contain git status output
+        if (!result) return {
+          status: 'warn',
+          detail: 'IPC não registrado',
+          rec: 'Git Recovery IPC inativo → reinicie o MF Control Center para ativar.',
+        };
+        if (result.error) return {
+          status: 'warn',
+          detail: result.error.slice(0, 60),
+          rec: 'Erro no repositório Git → verifique se o projeto está num repositório git válido.',
+        };
         const clean = (result.stdout || result.output || '').includes('nothing to commit');
         const branch = (result.stdout || result.output || '').match(/On branch (\S+)/)?.[1] || '?';
         return {
@@ -219,9 +315,17 @@ const CHECKS = [
       } catch (e) {
         const msg = e.message || String(e);
         if (msg.includes('No handler') || msg.includes('not registered')) {
-          return { status: 'warn', detail: '⚠️ IPC não registrado — reiniciar Electron para ativar' };
+          return {
+            status: 'warn',
+            detail: 'IPC não registrado — reiniciar Electron para ativar',
+            rec: 'Git IPC inativo → reinicie o MF Control Center.',
+          };
         }
-        return { status: 'error', detail: msg.slice(0, 70) };
+        return {
+          status: 'warn',
+          detail: msg.slice(0, 70),
+          rec: 'Erro no Git Recovery → reinicie o aplicativo.',
+        };
       }
     },
   },
@@ -302,6 +406,7 @@ const CHECKS = [
       return {
         status: hasWarn ? 'warn' : 'ok',
         detail: checks.join(' · '),
+        rec: hasWarn ? 'Execute um backup completo no Backup Center e ative offline persistence.' : undefined,
       };
     },
   },
@@ -313,7 +418,9 @@ async function _runChecks() {
   if (!grid) return;
 
   const summary = document.getElementById('hc-summary');
+  const recBox  = document.getElementById('hc-recommendations');
   if (summary) summary.textContent = '⟳ Verificando...';
+  if (recBox)  recBox.style.display = 'none';
 
   // Renderiza cards em estado "verificando"
   // Nota: c.icon, c.title, c.desc, c.id são constantes hardcoded em CHECKS (não input externo).
@@ -335,27 +442,48 @@ async function _runChecks() {
   `).join('');
 
   // Executa checks em paralelo, atualiza UI conforme chegam
-  const results = await Promise.all(
+  const recs = [];
+  const statusList = await Promise.all(
     CHECKS.map(async c => {
       try {
         const r = await c.run();
         _updateCard(c.id, r.status, r.detail);
+        if (r.rec && r.status !== 'ok') recs.push({ status: r.status, text: r.rec, title: c.title });
         return r.status;
       } catch (e) {
-        _updateCard(c.id, 'error', 'Exceção: ' + e.message.slice(0, 60));
-        return 'error';
+        _updateCard(c.id, 'critico', 'Exceção: ' + e.message.slice(0, 60));
+        return 'critico';
       }
     })
   );
 
+  // Painel de recomendações
+  if (recBox && recs.length > 0) {
+    recBox.style.display = '';
+    recBox.innerHTML = `
+      <div style="color:#fca5a5;font-weight:600;font-size:12px;margin-bottom:8px;">
+        ⚡ Recomendações automáticas (${recs.length})
+      </div>
+      ${recs.map(r => `
+        <div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start;">
+          <span style="flex-shrink:0;">${r.status === 'critico' ? '🔴' : '⚠️'}</span>
+          <div>
+            <span style="color:${r.status === 'critico' ? '#fca5a5' : '#fcd34d'};font-size:11px;font-weight:600;">${_esc(r.title)}:</span>
+            <span style="color:#e2e8f0;font-size:11px;margin-left:4px;">${_esc(r.text)}</span>
+          </div>
+        </div>
+      `).join('')}
+    `;
+  }
+
   // Atualiza resumo
-  const ok   = results.filter(r => r === 'ok').length;
-  const warn = results.filter(r => r === 'warn').length;
-  const err  = results.filter(r => r === 'error').length;
+  const ok      = statusList.filter(r => r === 'ok').length;
+  const warn    = statusList.filter(r => r === 'warn').length;
+  const critico = statusList.filter(r => r === 'critico').length;
 
   if (summary) {
-    if (err > 0) {
-      summary.textContent = `❌ ${err} erro${err !== 1 ? 's' : ''} · ⚠️ ${warn} aviso${warn !== 1 ? 's' : ''} · ✅ ${ok} OK`;
+    if (critico > 0) {
+      summary.textContent = `🔴 ${critico} crítico${critico !== 1 ? 's' : ''} · ⚠️ ${warn} aviso${warn !== 1 ? 's' : ''} · ✅ ${ok} OK`;
       summary.style.color = '#f87171';
     } else if (warn > 0) {
       summary.textContent = `⚠️ ${warn} aviso${warn !== 1 ? 's' : ''} · ✅ ${ok} OK`;
@@ -383,9 +511,9 @@ function _updateCard(id, status, detail) {
   if (!card || !icon || !detEl) return;
 
   const cfg = {
-    ok:    { emoji: '✅', color: '#4ade80', border: '#166534', bg: 'rgba(22,101,52,0.08)' },
-    warn:  { emoji: '⚠️', color: '#fbbf24', border: '#92400e', bg: 'rgba(146,64,14,0.08)' },
-    error: { emoji: '❌', color: '#f87171', border: '#7f1d1d', bg: 'rgba(127,29,29,0.08)' },
+    ok:      { emoji: '✅', color: '#4ade80', border: '#166534', bg: 'rgba(22,101,52,0.08)' },
+    warn:    { emoji: '⚠️', color: '#fbbf24', border: '#92400e', bg: 'rgba(146,64,14,0.08)' },
+    critico: { emoji: '🔴', color: '#f87171', border: '#7f1d1d', bg: 'rgba(127,29,29,0.12)' },
   }[status] || { emoji: '❓', color: '#94a3b8', border: '#1e3a5f', bg: '' };
 
   icon.textContent            = cfg.emoji;
