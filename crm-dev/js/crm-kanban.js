@@ -2,7 +2,7 @@
 // Handles: board render, card HTML, drag-and-drop, mover/voltar, excluir, whatsapp, proposta, fechar
 
 import {
-  doc, updateDoc, addDoc, collection, deleteDoc
+  doc, updateDoc, addDoc, collection, deleteDoc, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from '../firebase/config.js';
@@ -407,6 +407,7 @@ async function novoLead() {
     userId: uid,
     data: new Date().toISOString(),
     criadoEm: new Date().toISOString(),
+    createdAt: serverTimestamp(),
     utm_source: utm.source,
     utm_campaign: utm.campaign,
     utm_medium: utm.medium
