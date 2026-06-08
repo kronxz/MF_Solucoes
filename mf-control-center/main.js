@@ -539,17 +539,224 @@ ipcMain.handle('recovery:readLog', async () => {
 });
 
 // ─── IPC: Git ─────────────────────────────────────────────────────────────────
-// Usa execFile (sem shell) — sem interpolação de input do usuário
+// SOMENTE LEITURA — nenhum checkout, reset, push, merge ou operação destrutiva.
+// Usa execFile (sem shell) — sem interpolação de input do usuário.
 const { execFile } = require('child_process');
 
+/** Executa git e retorna stdout como string (compatibilidade legada) */
 function gitCmd(args) {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd: BACKUP_ROOT }, (err, stdout) =>
+    execFile('git', args, { cwd: BACKUP_ROOT, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) =>
       resolve(err ? 'Erro: ' + err.message : stdout)
     );
   });
 }
 
+/** Executa git e retorna { ok, stdout, stderr } */
+function gitRaw(args) {
+  return new Promise((resolve) => {
+    execFile('git', ['--no-pager', ...args], { cwd: BACKUP_ROOT, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) =>
+      resolve({ ok: !err, stdout: (stdout || '').trim(), stderr: (stderr || '').trim() })
+    );
+  });
+}
+
+/** Valida que ref é apenas hash/tag/branch — sem injeção de comandos */
+function refSeguro(ref) {
+  if (typeof ref !== 'string') return false;
+  // Aceita hex, nomes de branch/tag (alfanumerico, -, _, /, .)
+  return /^[a-zA-Z0-9._\-/~^]{1,200}$/.test(ref);
+}
+
+// ── Legados (mantidos para compatibilidade) ───────────────────────────────────
 ipcMain.handle('git:log',    () => gitCmd(['log', '--oneline', '-20']));
 ipcMain.handle('git:status', () => gitCmd(['status', '--short']));
 ipcMain.handle('git:tags',   () => gitCmd(['tag', '-l']));
+
+// ── CC-5: Git Recovery Center ─────────────────────────────────────────────────
+
+/** PAINEL 1 — Status completo */
+ipcMain.handle('git:statusFull', async () => {
+  const [branchR, logR, tagHeadR, remoteR, statusR, versionR] = await Promise.all([
+    gitRaw(['rev-parse', '--abbrev-ref', 'HEAD']),
+    gitRaw(['log', '-1', '--format=%H\x1f%h\x1f%s\x1f%ai\x1f%an']),
+    gitRaw(['tag', '--points-at', 'HEAD']),
+    gitRaw(['remote', '-v']),
+    gitRaw(['status', '--short']),
+    gitRaw(['--version']),
+  ]);
+  const [hash, hashShort, subject, date, author] = (logR.stdout || '').split('\x1f');
+  const remoteLines = remoteR.stdout.split('\n').filter(l => l.includes('(fetch)'));
+  const remoteUrl   = remoteLines[0]?.replace(/\s+\(fetch\)/, '').replace(/^origin\s+/, '') || '(sem remote)';
+
+  // Último push: data do commit mais recente no remote
+  const lastPushR = await gitRaw(['log', '-1', '--format=%ai', 'origin/HEAD']);
+
+  return {
+    ok:          branchR.ok,
+    branch:      branchR.stdout || '?',
+    hash:        hash?.trim()      || '?',
+    hashShort:   hashShort?.trim() || '?',
+    subject:     subject?.trim()   || '?',
+    date:        date?.trim()      || '?',
+    author:      author?.trim()    || '?',
+    tagsOnHead:  tagHeadR.stdout ? tagHeadR.stdout.split('\n').filter(Boolean) : [],
+    remoteUrl,
+    lastPush:    lastPushR.stdout || '?',
+    statusLines: statusR.stdout ? statusR.stdout.split('\n').filter(Boolean) : [],
+    gitVersion:  versionR.stdout || '?',
+  };
+});
+
+/** PAINEL 2 — Histórico 50 commits */
+ipcMain.handle('git:log50', async () => {
+  const r = await gitRaw(['log', '-50', '--format=%H\x1f%h\x1f%an\x1f%ae\x1f%ai\x1f%s']);
+  if (!r.ok) return { ok: false, commits: [], error: r.stderr };
+  const commits = r.stdout.split('\n').filter(Boolean).map((line, i) => {
+    const [hash, hashShort, author, email, date, ...msgParts] = line.split('\x1f');
+    return { i: i + 1, hash, hashShort, author, email, date, subject: msgParts.join('\x1f') };
+  });
+  return { ok: true, commits };
+});
+
+/** PAINEL 3 — Tags */
+ipcMain.handle('git:tagsAll', async () => {
+  const listR = await gitRaw(['tag', '-l', '--sort=-version:refname']);
+  if (!listR.ok) return { ok: false, tags: [], error: listR.stderr };
+  const names = listR.stdout.split('\n').filter(Boolean);
+
+  const tags = [];
+  for (const name of names) {
+    const infoR = await gitRaw(['log', '-1', '--format=%h\x1f%s\x1f%ai\x1f%an', name]);
+    const [hashShort, subject, date, author] = (infoR.stdout || '').split('\x1f');
+    tags.push({ name, hashShort: hashShort?.trim(), subject: subject?.trim(), date: date?.trim(), author: author?.trim() });
+  }
+  return { ok: true, tags };
+});
+
+/** PAINEL 4 — Branches */
+ipcMain.handle('git:branchesAll', async () => {
+  const [localR, remoteR, currentR] = await Promise.all([
+    gitRaw(['branch', '--format=%(HEAD)|%(refname:short)|%(objectname:short)|%(committerdate:relative)|%(authorname)']),
+    gitRaw(['branch', '-r', '--format=%(refname:short)|%(objectname:short)|%(committerdate:relative)']),
+    gitRaw(['rev-parse', '--abbrev-ref', 'HEAD']),
+  ]);
+  const current = currentR.stdout;
+  const local = (localR.stdout || '').split('\n').filter(Boolean).map(l => {
+    const [active, name, hash, relDate, author] = l.split('|');
+    return { name, hash, relDate, author, isCurrent: active === '*' || name === current };
+  });
+  const remote = (remoteR.stdout || '').split('\n').filter(Boolean)
+    .filter(l => !l.includes('->'))
+    .map(l => {
+      const [name, hash, relDate] = l.split('|');
+      return { name, hash, relDate };
+    });
+  return { ok: true, current, local, remote };
+});
+
+/** PAINEL 5 — Diff entre dois refs (somente stat, sem conteúdo) */
+ipcMain.handle('git:diffStat', async (_e, { refA, refB }) => {
+  if (!refSeguro(refA) || !refSeguro(refB)) {
+    return { ok: false, error: 'Ref inválida — use apenas hash ou nome de tag/branch' };
+  }
+  const [statR, namesR] = await Promise.all([
+    gitRaw(['diff', '--stat', `${refA}..${refB}`]),
+    gitRaw(['diff', '--name-status', `${refA}..${refB}`]),
+  ]);
+  const summary = (statR.stdout || '').split('\n').slice(-2).join('\n').trim();
+  const files = (namesR.stdout || '').split('\n').filter(Boolean).map(l => {
+    const [status, ...parts] = l.split('\t');
+    return { status: status?.trim(), file: parts.join('\t') };
+  });
+  return { ok: statR.ok, stat: statR.stdout, summary, files: files.slice(0, 100), totalFiles: files.length };
+});
+
+/** PAINEL 6 — Restore Prep: SOMENTE SIMULAÇÃO — retorna comandos, NÃO executa */
+ipcMain.handle('git:restoreSim', async (_e, { ref, mode }) => {
+  if (!refSeguro(ref)) {
+    return { ok: false, error: 'Ref inválida' };
+  }
+  // Verifica se ref existe
+  const checkR = await gitRaw(['rev-parse', '--verify', ref]);
+  if (!checkR.ok) return { ok: false, error: 'Ref não encontrada: ' + ref };
+
+  const hash = checkR.stdout.slice(0, 8);
+  const logR  = await gitRaw(['log', '-1', '--format=%h|%s|%ai|%an', ref]);
+  const [h, s, d, a] = (logR.stdout || '').split('|');
+
+  // Modos disponíveis (NÃO executados)
+  const modos = {
+    checkout: {
+      descricao: 'Navegar para o estado do commit (HEAD detached)',
+      comandos: [
+        `git stash                        # salva trabalho pendente`,
+        `git checkout ${ref}              # vai para o commit/tag`,
+        `# [verificar, testar]`,
+        `git checkout release/v1.0-final  # volta ao branch atual`,
+        `git stash pop                    # restaura trabalho`,
+      ],
+      risco: 'BAIXO — nenhum arquivo é modificado permanentemente',
+    },
+    'reset-soft': {
+      descricao: 'Mover HEAD para o commit mantendo as alterações staged',
+      comandos: [
+        `git reset --soft ${ref}          # HEAD vai para o commit`,
+        `# arquivos modificados ficam staged, prontos para novo commit`,
+      ],
+      risco: 'MÉDIO — altera o histórico local do branch',
+    },
+    'reset-hard': {
+      descricao: 'Reverter TUDO para o estado exato do commit (DESTRUTIVO)',
+      comandos: [
+        `git reset --hard ${ref}          # ⚠️ DESTRUTIVO — descarta alterações locais`,
+        `git clean -fd                    # ⚠️ remove arquivos não rastreados`,
+      ],
+      risco: '🔴 ALTO — IRREVERSÍVEL localmente, use apenas com backup',
+    },
+    'new-branch': {
+      descricao: 'Criar novo branch a partir do commit (recomendado)',
+      comandos: [
+        `git checkout -b restore-from-${ref.slice(0,8)} ${ref}`,
+        `# trabalhe no novo branch sem afetar release/v1.0-final`,
+        `# merge ou cherry-pick quando validado`,
+      ],
+      risco: 'ZERO — não altera nenhum branch existente',
+    },
+  };
+
+  const modoSelecionado = modos[mode] || modos['new-branch'];
+  return {
+    ok: true,
+    ref,
+    hash: h?.trim() || hash,
+    subject: s?.trim() || '?',
+    date: d?.trim()    || '?',
+    author: a?.trim()  || '?',
+    modos: Object.entries(modos).map(([k, v]) => ({
+      key: k,
+      descricao: v.descricao,
+      comandos: v.comandos,
+      risco: v.risco,
+      selecionado: k === (mode || 'new-branch'),
+    })),
+    selecionado: modoSelecionado,
+  };
+});
+
+/** Validação: Git instalado + repo acessível */
+ipcMain.handle('git:validate', async () => {
+  const [versionR, repoR, logR] = await Promise.all([
+    gitRaw(['--version']),
+    gitRaw(['rev-parse', '--git-dir']),
+    gitRaw(['log', '-1', '--format=%h']),
+  ]);
+  return {
+    gitInstalled:   versionR.ok,
+    gitVersion:     versionR.stdout,
+    repoAccessible: repoR.ok,
+    gitDir:         repoR.stdout,
+    canReadCommits: logR.ok,
+    headHash:       logR.stdout,
+  };
+});

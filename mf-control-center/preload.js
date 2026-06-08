@@ -30,11 +30,20 @@ contextBridge.exposeInMainWorld('MFControl', {
     completo:  (jsonData) => ipcRenderer.invoke('backup:completo', jsonData),
   },
 
-  // Git (read-only)
+  // Git (read-only — CC-5 Git Recovery Center)
   git: {
+    // Legados
     log:    () => ipcRenderer.invoke('git:log'),
     status: () => ipcRenderer.invoke('git:status'),
     tags:   () => ipcRenderer.invoke('git:tags'),
+    // CC-5: Painéis completos
+    statusFull:  ()              => ipcRenderer.invoke('git:statusFull'),
+    log50:       ()              => ipcRenderer.invoke('git:log50'),
+    tagsAll:     ()              => ipcRenderer.invoke('git:tagsAll'),
+    branchesAll: ()              => ipcRenderer.invoke('git:branchesAll'),
+    diffStat:    (refA, refB)    => ipcRenderer.invoke('git:diffStat',    { refA, refB }),
+    restoreSim:  (ref, mode)     => ipcRenderer.invoke('git:restoreSim',  { ref, mode }),
+    validate:    ()              => ipcRenderer.invoke('git:validate'),
   },
 
   // Recovery Center
