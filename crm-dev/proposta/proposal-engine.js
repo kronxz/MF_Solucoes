@@ -162,9 +162,24 @@ function populate(payload){
   renderEconomyChart('chart-economia', normalizeEconomyData(economy));
 }
 
+function buildDocTitle(payload) {
+  if (!payload) return 'PROPOSTA_SOLAR';
+  const sanitize = str => String(str || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/[\/\\:*?"<>|]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .trim();
+  const nome = sanitize(payload.nome);
+  const num  = sanitize(payload.propostaId || payload.id || '');
+  return ['PROPOSTA_SOLAR', nome, num].filter(Boolean).join('_');
+}
+
 window.addEventListener('DOMContentLoaded', ()=>{
   const payload = readPayload();
   populate(payload);
+  document.title = buildDocTitle(payload);
 
   document.getElementById('btn-print')?.addEventListener('click', ()=>window.print());
   document.getElementById('btn-export-pdf')?.addEventListener('click', ()=>{
