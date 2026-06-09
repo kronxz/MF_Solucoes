@@ -2,22 +2,48 @@
 
 .board {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   align-items: flex-start;
   flex-wrap: nowrap;
-  overflow-x: auto;
   padding-bottom: 16px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .board::-webkit-scrollbar { height: 6px; }
 .board::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
 
-.column {
-  min-width: 290px;
-  max-width: 290px;
-  flex-shrink: 0;
+/* ── PC: todas as colunas cabem na tela sem scroll ─────────────── */
+@media (min-width: 769px) {
+  .board {
+    overflow-x: hidden;
+    gap: 8px;
+  }
+  .column {
+    flex: 1 1 0;        /* cresce e encolhe igualmente */
+    min-width: 0;       /* permite encolher abaixo de 290px */
+    max-width: none;
+    width: 0;           /* força o flex a distribuir espaço */
+  }
+  /* Cards no PC: fonte menor para caber melhor */
+  .card { padding: 10px; }
+  .card-nome { font-size: 13px; }
+  .btn-card { font-size: 10px; padding: 6px 4px; }
+  .column h2 { font-size: 12px; padding: 8px 6px; }
+}
+
+/* ── Mobile: scroll horizontal, colunas fixas ──────────────────── */
+@media (max-width: 768px) {
+  .board {
+    overflow-x: auto;
+  }
+  .column {
+    min-width: 290px;
+    max-width: 290px;
+    flex-shrink: 0;
+  }
 }
 
 .column h2 {
