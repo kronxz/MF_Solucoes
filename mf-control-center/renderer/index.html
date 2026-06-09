@@ -22,7 +22,7 @@
       <div class="login-card">
 
         <div class="login-logo">
-          <span class="brand-icon">⚡</span>
+          <img src="../assets/logo-mf.png" alt="MF Soluções" class="login-logo-img">
           <div class="brand-text">
             <h1>MF Control Center</h1>
             <p>Ecossistema MF Soluções</p>
@@ -30,14 +30,11 @@
         </div>
 
         <div class="login-form">
+          <!-- Email embutido — não exibido ao usuário -->
+          <input type="hidden" id="input-email" value="marcos_felipe_eng@hotmail.com">
+
           <div class="form-group">
-            <label for="input-email">Email</label>
-            <input type="email"    id="input-email"
-              placeholder="seu@email.com"
-              autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label for="input-senha">Senha</label>
+            <label for="input-senha">Senha de acesso</label>
             <input type="password" id="input-senha"
               placeholder="••••••••"
               autocomplete="current-password">
@@ -49,10 +46,33 @@
             <span id="btn-login-text">Entrar</span>
             <span id="btn-login-spinner" class="spin" aria-hidden="true">⟳</span>
           </button>
+
+          <button id="btn-reset-senha" class="btn-link-subtle" type="button">
+            Esqueci minha senha
+          </button>
+        </div>
+
+        <!-- Painel de reset — oculto por padrão -->
+        <div id="painel-reset" class="reset-panel" style="display:none">
+          <p class="reset-info">
+            Um link de redefinição será enviado para<br>
+            <strong>marcos_felipe_eng@hotmail.com</strong>
+          </p>
+          <div id="reset-success" class="reset-success" style="display:none">
+            ✅ Email enviado! Verifique sua caixa de entrada.
+          </div>
+          <div id="reset-error" class="login-error" style="display:none"></div>
+          <div class="reset-actions">
+            <button id="btn-enviar-reset" class="btn-primary">
+              <span id="btn-reset-text">Enviar link</span>
+              <span id="btn-reset-spinner" class="spin" style="display:none">⟳</span>
+            </button>
+            <button id="btn-cancelar-reset" class="btn-secondary">Cancelar</button>
+          </div>
         </div>
 
         <div class="login-footer">
-          <small>V1.3 · Firebase PROD · mf-solucoes-crm</small>
+          <small>V2.0 · Firebase PROD · mf-solucoes-crm</small>
         </div>
 
       </div>
@@ -67,7 +87,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-logo">
-        <span class="brand-icon-sm">⚡</span>
+        <img src="../assets/logo-mf.png" alt="MF" class="sidebar-logo-img">
         <span class="brand-name">MF Control</span>
       </div>
 

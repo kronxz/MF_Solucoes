@@ -8,6 +8,11 @@ const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path  = require('path');
 const fs    = require('fs');
 
+// Git: caminho absoluto para evitar falha de PATH no Electron empacotado
+const GIT_EXEC = fs.existsSync('C:/Program Files/Git/cmd/git.exe')
+  ? 'C:/Program Files/Git/cmd/git.exe'
+  : 'git';
+
 const isDev = process.env.NODE_ENV === 'development';
 
 // ─── Ícone da aplicação ────────────────────────────────────────────────────────
@@ -287,11 +292,12 @@ ipcMain.handle('backup:completo', async (_e, jsonData) => {
 const yauzl      = require('yauzl');
 const extractZip = require('extract-zip');
 
+// V2.0 — Ponto de restauração seguro (09/06/2026)
 const BACKUPS_V1_2 = {
-  crm:       'BACKUP_CRM_V1_2.zip',
+  crm:       'BACKUP_CRM_V2_0.zip',
   landing:   'BACKUP_LANDING_V1_2.zip',
-  firestore: 'BACKUP_FIRESTORE_V1_2.zip',
-  rules:     'BACKUP_RULES_V1_2.zip',
+  firestore: 'BACKUP_FIRESTORE_V2_0.zip',
+  rules:     'BACKUP_RULES_V2_0.zip',
 };
 
 /** Valida ZIP: magic bytes + lista entradas via yauzl */
@@ -333,7 +339,7 @@ ipcMain.handle('recovery:scan', async () => {
     result[type] = { filename, exists, size: exists ? fs.statSync(p).size : 0, path: p };
   }
   // Firestore JSON extra
-  const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V1_2.json');
+  const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V2_0.json');
   result.firestore.jsonExists = fs.existsSync(jsonPath);
   result.firestore.jsonSize   = result.firestore.jsonExists ? fs.statSync(jsonPath).size : 0;
   return result;
@@ -366,7 +372,7 @@ ipcMain.handle('recovery:health', async () => {
 
     // Validação extra JSON para Firestore
     if (type === 'firestore' && v.ok) {
-      const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V1_2.json');
+      const jsonPath = path.join(BACKUP_ROOT, 'BACKUP_FIRESTORE_V2_0.json');
       if (fs.existsSync(jsonPath)) {
         try {
           const parsed = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
@@ -411,7 +417,7 @@ ipcMain.handle('recovery:dryRun', async (_e, type) => {
       break;
     case 'firestore':
       plan.targets = ['Firebase Firestore PROD (via Firebase CLI)'];
-      plan.description = 'Extrai BACKUP_FIRESTORE_V1_2.json e disponibiliza para import via Firebase CLI';
+      plan.description = 'Extrai BACKUP_FIRESTORE_V2_0.json e disponibiliza para import via Firebase CLI';
       plan.warnings = [
         'NÃO altera o Firestore diretamente',
         'Requer: firebase firestore:delete --all-collections',
@@ -435,10 +441,10 @@ ipcMain.handle('recovery:dryRun', async (_e, type) => {
 
 /**
  * FASE 5 — Restore Engine
- * ⚠️  CC-4 LOCK: restore real bloqueado até CC-4.1
- * As funções estão implementadas mas RECOVERY_LOCKED=true
+ * ✅  CC-4.1 LIBERADO: restore real habilitado (09/06/2026)
+ * Sistema certificado e testado — V2.0 ponto de restauração seguro
  */
-const RECOVERY_LOCKED = true; // Remover em CC-4.1 após certificação
+const RECOVERY_LOCKED = false; // CC-4.1 liberado após certificação V2.0
 
 ipcMain.handle('recovery:restore', async (_e, { type, confirm1, confirm2, confirm3 }) => {
   // Fase 6 — Tripla confirmação
@@ -556,7 +562,7 @@ const { execFile } = require('child_process');
 /** Executa git e retorna stdout como string (compatibilidade legada) */
 function gitCmd(args) {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd: BACKUP_ROOT, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) =>
+    execFile(GIT_EXEC, args, { cwd: BACKUP_ROOT, maxBuffer: 4 * 1024 * 1024 }, (err, stdout) =>
       resolve(err ? 'Erro: ' + err.message : stdout)
     );
   });
@@ -565,7 +571,7 @@ function gitCmd(args) {
 /** Executa git e retorna { ok, stdout, stderr } */
 function gitRaw(args) {
   return new Promise((resolve) => {
-    execFile('git', ['--no-pager', ...args], { cwd: BACKUP_ROOT, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) =>
+    execFile(GIT_EXEC, ['--no-pager', ...args], { cwd: BACKUP_ROOT, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) =>
       resolve({ ok: !err, stdout: (stdout || '').trim(), stderr: (stderr || '').trim() })
     );
   });
