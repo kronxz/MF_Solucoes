@@ -69,7 +69,7 @@ export function carregarLeadsMap(onUpdate) {
     onUpdate(_leadsMap);
   }
 
-  const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao','']);
+  const STATUS_ATIVOS = new Set(['novo','contato','proposta','fechado','instalacao','pos-venda','manutencao']);
 
   const unsubCalc = onSnapshot(collection(_db, 'leads'), (snapshot) => {
     _mapCalc = {};

@@ -550,7 +550,8 @@ img {
       margin-bottom: 6px;
     }
 
-    #modalDetalhes {
+    #modalDetalhes,
+    #modalLixeira {
       display: none;
       position: fixed;
       inset: 0;
@@ -563,7 +564,8 @@ img {
       justify-content: center;
     }
 
-    #modalDetalhes.ativo {
+    #modalDetalhes.ativo,
+    #modalLixeira.ativo {
       display: flex;
     }
 

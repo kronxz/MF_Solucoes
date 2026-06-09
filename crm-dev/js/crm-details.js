@@ -236,55 +236,77 @@ async function preencherAbaInteligencia(lead) {
     return;
   }
 
-  el.innerHTML = '<p class="crm-timeline-empty">Carregando eventos...</p>';
+  el.innerHTML = '<p class="crm-timeline-empty">Carregando...</p>';
 
   try {
+    // Busca eventos por sessionId — sem filtro de userId (eventos landing são anônimos)
     let eventosLead = [];
     if (lead.sessionId) {
-      const uid = getAuth(app).currentUser?.uid || null;
-      const base = collection(_db, 'eventos');
-      const q = uid
-        ? query(base, where('sessionId', '==', lead.sessionId), where('userId', '==', uid), orderBy('criadoEm', 'desc'), limit(100))
-        : query(base, where('sessionId', '==', lead.sessionId), orderBy('criadoEm', 'desc'), limit(100));
-      const snap = await getDocs(q);
+      const snap = await getDocs(
+        query(collection(_db, 'eventos'), where('sessionId', '==', lead.sessionId), orderBy('criadoEm', 'desc'), limit(100))
+      );
       eventosLead = snap.docs.map(d => d.data());
     }
 
-    const simulacoes = eventosLead.filter(e => e.evento === 'clicou_simular').length;
-    const whatsapp = eventosLead.filter(e => e.evento === 'clicou_whatsapp').length;
-    const scroll = eventosLead.filter(e => e.evento === 'scroll_profundo').length;
-    const telefone = eventosLead.some(e => e.evento === 'telefone_digitado');
-    const tempo = eventosLead.some(e => e.evento === 'ficou_40_segundos');
+    const simulacoes  = eventosLead.filter(e => e.evento === 'clicou_simular').length;
+    const whatsappEv  = eventosLead.filter(e => e.evento === 'clicou_whatsapp').length;
+    const scrollEv    = eventosLead.filter(e => e.evento === 'scroll_profundo').length;
+    const telefoneEv  = eventosLead.some(e => e.evento === 'telefone_digitado');
+    const tempoEv     = eventosLead.some(e => e.evento === 'ficou_40_segundos');
 
-    let score = scoreFirestore != null
-      ? scoreFirestore
-      : Math.min(100, simulacoes * 5 + whatsapp * 20 + scroll * 10 + (telefone ? 15 : 0) + (tempo ? 15 : 0));
-    const nivel = tempLabel.includes('Quente') || score >= 70 ? '🔥 Quente' : (tempLabel.includes('Morno') || score >= 30) ? '🟡 Morno' : '🟢 Frio';
-    const sugestao = score >= 70
-      ? 'Lead pronto para abordagem imediata no WhatsApp.'
-      : score >= 40
-        ? 'Lead demonstrou interesse moderado. Agende follow-up.'
-        : 'Lead ainda frio. Aguarde mais interações.';
+    // Dados de rastreamento gravados diretamente no lead (lp_leads)
+    const tempoSite   = lead.tempoTotalSegundos != null ? lead.tempoTotalSegundos + 's' : '—';
+    const scrollMax   = lead.scrollMaximoPercentual != null ? lead.scrollMaximoPercentual + '%' : '—';
+    const wppLead     = lead.cliquesWhatsapp != null ? lead.cliquesWhatsapp : whatsappEv;
+    const digitouNome = lead.digitouNome != null ? (lead.digitouNome ? 'Sim' : 'Não') : '—';
+    const digitouTel  = lead.digitouTelefone != null ? (lead.digitouTelefone ? 'Sim' : 'Não') : (telefoneEv ? 'Sim' : '—');
 
+    let score = scoreFirestore != null ? scoreFirestore
+      : Math.min(100, simulacoes * 5 + wppLead * 20 + scrollEv * 10 + (telefoneEv ? 15 : 0) + (tempoEv ? 15 : 0));
+    const nivel    = score >= 70 ? '🔥 Quente' : score >= 30 ? '🟡 Morno' : '🟢 Frio';
     const corNivel = score >= 70 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#22c55e';
+    const sugestao = score >= 70 ? 'Lead pronto — abordar agora no WhatsApp.'
+      : score >= 40 ? 'Interesse moderado — agendar follow-up.'
+      : 'Lead frio — aguardar mais interações.';
 
-    el.innerHTML = `
-<div class="glass-card" style="padding:20px; margin-bottom:12px; border-left:4px solid ${corNivel}">
-  <div style="font-size:22px;font-weight:bold;color:${corNivel};margin-bottom:12px">${nivel}</div>
-  <div style="font-size:18px;margin-bottom:16px">🎯 Score: <b>${score}/100</b></div>
-  <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
-  <p>🔥 Eventos: <b>${eventosLead.length}</b></p>
-  <p>📈 Simulações: <b>${simulacoes}</b></p>
-  <p>📜 Scroll profundo: <b>${scroll}</b></p>
-  <p>💬 Cliques WhatsApp: <b>${whatsapp}</b></p>
-  <p>📞 Digitou telefone: <b>${telefone ? 'Sim' : 'Não'}</b></p>
-  <p>⏱ Ficou +40s: <b>${tempo ? 'Sim' : 'Não'}</b></p>
-  <hr style="border-color:rgba(255,255,255,0.08);margin:12px 0">
-  <p>💡 <b>Sugestão:</b> ${sugestao}</p>
-</div>`;
+    const row = (icon, label, val) =>
+      `<p style="margin:6px 0">${icon} <b style="color:#94a3b8">${label}:</b> ${escHtml(String(val ?? '—'))}</p>`;
+
+    const el2 = document.createElement('div');
+    el2.innerHTML = '';
+    el.textContent = '';
+
+    const scoreCard = document.createElement('div');
+    scoreCard.className = 'glass-card';
+    scoreCard.style.cssText = `padding:20px;margin-bottom:12px;border-left:4px solid ${corNivel}`;
+    const scoreDiv = document.createElement('div');
+    scoreDiv.innerHTML = `
+      <div style="font-size:22px;font-weight:bold;color:${corNivel};margin-bottom:8px">${nivel}</div>
+      <div style="font-size:18px;margin-bottom:12px">🎯 Score: <b>${score}/100</b></div>
+      <hr style="border-color:rgba(255,255,255,0.08);margin:10px 0">
+      <b style="color:#64748b;font-size:12px;letter-spacing:1px">COMPORTAMENTO</b>
+      ${row('🔥','Eventos registrados', eventosLead.length)}
+      ${row('📈','Simulações', simulacoes)}
+      ${row('📜','Scroll profundo', scrollEv || scrollMax)}
+      ${row('⏱','Tempo no site', tempoSite)}
+      ${row('💬','Cliques WhatsApp', wppLead)}
+      ${row('📞','Digitou telefone', digitouTel)}
+      ${row('👤','Digitou nome', digitouNome)}
+      <hr style="border-color:rgba(255,255,255,0.08);margin:10px 0">
+      <b style="color:#64748b;font-size:12px;letter-spacing:1px">ORIGEM</b>
+      ${row('📍','Origem', lead.utm_source || lead.referrer || 'direto')}
+      ${row('📢','Campanha', lead.utm_campaign || '—')}
+      ${row('🖥','Mídia', lead.utm_medium || '—')}
+      ${row('🔗','QR / Bairro', lead.bairroQR || '—')}
+      ${row('🌐','Landing', lead.landingPage || '—')}
+      ${row('↩','Referrer', lead.referrer || '—')}
+      <hr style="border-color:rgba(255,255,255,0.08);margin:10px 0">
+      <p>💡 <b>Sugestão:</b> ${sugestao}</p>`;
+    scoreCard.appendChild(scoreDiv);
+    el.appendChild(scoreCard);
   } catch (err) {
     console.error('[CRM-Details] Erro ao buscar eventos:', err);
-    el.innerHTML = '<p class="crm-timeline-empty">Erro ao carregar inteligência.</p>';
+    el.textContent = 'Erro ao carregar inteligência.';
   }
 }
 
