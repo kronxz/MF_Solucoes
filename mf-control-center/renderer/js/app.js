@@ -16,8 +16,10 @@ import { gitInit }        from './pages/git.js';
 import { firestoreInit }  from './pages/firestore.js';
 import { crmInit }        from './pages/crm.js';
 import { propostasInit }  from './pages/propostas.js';
-import { updatesInit }    from './pages/updates.js';
-import { healthInit }     from './pages/health.js';
+import { updatesInit }     from './pages/updates.js';
+import { healthInit }      from './pages/health.js';
+import { documentosInit }  from './pages/documentos.js';
+import { actionCenterInit } from './pages/action-center.js';
 
 // ─── Estado Global ─────────────────────────────────────────────────────────────
 window._mfUser   = null;
@@ -43,6 +45,8 @@ export function showPage(pageId) {
   if (pageId === 'firestore')      firestoreInit();
   if (pageId === 'health')         healthInit();
   if (pageId === 'updates')        updatesInit();
+  if (pageId === 'documentos')     documentosInit();
+  if (pageId === 'action-center')  actionCenterInit();
 }
 
 // ─── Auth State ────────────────────────────────────────────────────────────────

@@ -59,8 +59,8 @@ function _setupWebview() {
   if (btnExternal) {
     btnExternal.addEventListener('click', () => {
       const url = _crmPath
-        ? 'file:///' + _crmPath + '/proposta.html'
-        : 'https://mf-solucoes-crm.web.app/proposta.html';
+        ? 'file:///' + _crmPath + '/proposta/proposal.html'
+        : 'https://mf-solucoes-crm.web.app/proposta/proposal.html';
       window.MFControl?.openExternal(url);
     });
   }

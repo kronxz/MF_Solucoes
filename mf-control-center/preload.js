@@ -56,4 +56,13 @@ contextBridge.exposeInMainWorld('MFControl', {
     readLog:  ()            => ipcRenderer.invoke('recovery:readLog'),
   },
 
+  // CC-9: Document Manager
+  docs: {
+    scanBase:   ()           => ipcRenderer.invoke('docs:scanBase'),
+    openFile:   (fp)         => ipcRenderer.invoke('docs:openFile', fp),
+    selectFile: (opts)       => ipcRenderer.invoke('docs:selectFile', opts),
+    fileInfo:   (fp)         => ipcRenderer.invoke('docs:fileInfo', fp),
+    listDir:    (dir)        => ipcRenderer.invoke('docs:listDir', dir),
+  },
+
 });

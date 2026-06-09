@@ -112,6 +112,15 @@
           <span class="nav-icon">📄</span> Propostas
         </button>
 
+        <!-- ── DOCUMENTOS ─────────────────────── -->
+        <div class="nav-group">DOCUMENTOS</div>
+        <button class="nav-btn" data-page="documentos">
+          <span class="nav-icon">📁</span> Document Manager
+        </button>
+        <button class="nav-btn" data-page="action-center">
+          <span class="nav-icon">⚡</span> Action Center
+        </button>
+
         <!-- ── CONTROLE ───────────────────────── -->
         <div class="nav-group">CONTROLE</div>
         <button class="nav-btn" data-page="mfcc-dashboard">
@@ -189,6 +198,16 @@
           partition="persist:crm"
           allowpopups
         ></webview>
+      </div>
+
+      <!-- ── DOCUMENT MANAGER — CC-9 ──────────── -->
+      <div id="page-documentos" class="page" style="display:none">
+        <div class="page-loading">Carregando Document Manager...</div>
+      </div>
+
+      <!-- ── ACTION CENTER — CC-10 ─────────────── -->
+      <div id="page-action-center" class="page" style="display:none">
+        <div class="page-loading">Carregando Action Center...</div>
       </div>
 
       <!-- ── MF DASHBOARD ───────────────────── -->

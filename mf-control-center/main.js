@@ -770,3 +770,158 @@ ipcMain.handle('git:validate', async () => {
     headHash:       logR.stdout,
   };
 });
+
+// ── CC-9: Document Manager ────────────────────────────────────────────────────
+
+const DOCS_BASE = path.join(
+  'C:', 'Users', 'kronxz', 'OneDrive', 'Área de Trabalho', 'mf soluçoes'
+);
+
+/** Lê diretório com segurança — retorna [] em caso de erro */
+function safeReadDir(dir) {
+  try { return fs.readdirSync(dir); } catch { return []; }
+}
+
+/** Stat seguro — retorna null em caso de erro */
+function safeStat(fp) {
+  try { return fs.statSync(fp); } catch { return null; }
+}
+
+/** Extensões de imagem/vídeo */
+const IMG_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']);
+const VID_EXTS  = new Set(['.mp4', '.mov', '.avi', '.mkv', '.wmv']);
+const DOC_EXTS  = new Set(['.pdf', '.docx', '.doc', '.xlsx', '.xls', '.txt', '.md']);
+
+/** Escaneia pasta recursivamente — retorna lista de arquivos com metadados */
+function scanDir(dir, exts, recursive = false, maxDepth = 3, depth = 0) {
+  const results = [];
+  if (depth > maxDepth) return results;
+  for (const name of safeReadDir(dir)) {
+    const fp   = path.join(dir, name);
+    const stat = safeStat(fp);
+    if (!stat) continue;
+    if (stat.isDirectory() && recursive && depth < maxDepth) {
+      results.push(...scanDir(fp, exts, true, maxDepth, depth + 1));
+    } else if (stat.isFile()) {
+      const ext = path.extname(name).toLowerCase();
+      if (!exts || exts.has(ext)) {
+        results.push({
+          name,
+          path:  fp,
+          ext,
+          size:  stat.size,
+          mtime: stat.mtime.toISOString(),
+          dir,
+        });
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Scan completo da pasta mf soluçoes:
+ * retorna arquivos por categoria para o Document Manager
+ */
+ipcMain.handle('docs:scanBase', async () => {
+  try {
+    const allFiles = scanDir(DOCS_BASE, null, true, 4);
+
+    const propostas = allFiles.filter(f => f.ext === '.pdf' && /proposta/i.test(f.name));
+    const laudos    = allFiles.filter(f =>
+      f.ext === '.docx' && /laudo/i.test(f.name)
+    );
+    const orcamentos = allFiles.filter(f =>
+      (f.ext === '.pdf' || f.ext === '.docx' || f.ext === '.xlsx') &&
+      /or[cç]amento|orcamento/i.test(f.name)
+    );
+    const midias = allFiles.filter(f =>
+      IMG_EXTS.has(f.ext) || VID_EXTS.has(f.ext)
+    );
+    const outros = allFiles.filter(f =>
+      !propostas.includes(f) &&
+      !laudos.includes(f) &&
+      !orcamentos.includes(f) &&
+      !midias.includes(f)
+    );
+
+    // Lista subpastas (obras/projetos)
+    const subpastas = safeReadDir(DOCS_BASE)
+      .map(n => ({ name: n, path: path.join(DOCS_BASE, n) }))
+      .filter(e => { const s = safeStat(e.path); return s && s.isDirectory(); });
+
+    return {
+      ok:        true,
+      base:      DOCS_BASE,
+      total:     allFiles.length,
+      propostas,
+      laudos,
+      orcamentos,
+      midias,
+      outros,
+      subpastas,
+    };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+/** Abre arquivo com o programa padrão do Windows */
+ipcMain.handle('docs:openFile', async (_e, filePath) => {
+  if (!filePath || typeof filePath !== 'string') return { ok: false, error: 'Caminho inválido' };
+  if (!fs.existsSync(filePath)) return { ok: false, error: 'Arquivo não encontrado: ' + filePath };
+  const err = await shell.openPath(filePath);
+  return err ? { ok: false, error: err } : { ok: true };
+});
+
+/** Diálogo para selecionar um arquivo (upload/vincular) */
+ipcMain.handle('docs:selectFile', async (_e, opts = {}) => {
+  const filters = opts.filters || [
+    { name: 'Documentos', extensions: ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'txt'] },
+    { name: 'Imagens',    extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] },
+    { name: 'Vídeos',     extensions: ['mp4', 'mov', 'avi', 'mkv'] },
+    { name: 'Todos',      extensions: ['*'] },
+  ];
+  const result = await dialog.showOpenDialog({
+    title:      opts.title || 'Selecionar Arquivo',
+    filters,
+    properties: ['openFile'],
+    defaultPath: DOCS_BASE,
+  });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  const fp   = result.filePaths[0];
+  const stat = safeStat(fp);
+  return {
+    ok:    true,
+    path:  fp,
+    name:  path.basename(fp),
+    ext:   path.extname(fp).toLowerCase(),
+    size:  stat ? stat.size : 0,
+    mtime: stat ? stat.mtime.toISOString() : null,
+  };
+});
+
+/** Informações de um arquivo */
+ipcMain.handle('docs:fileInfo', async (_e, filePath) => {
+  if (!filePath) return null;
+  const stat = safeStat(filePath);
+  if (!stat) return null;
+  return {
+    path:  filePath,
+    name:  path.basename(filePath),
+    ext:   path.extname(filePath).toLowerCase(),
+    size:  stat.size,
+    mtime: stat.mtime.toISOString(),
+    exists: true,
+  };
+});
+
+/** Lista arquivos de uma subpasta */
+ipcMain.handle('docs:listDir', async (_e, dir) => {
+  try {
+    return scanDir(dir || DOCS_BASE, null, false);
+  } catch (e) {
+    return [];
+  }
+});
+// ── FIM CC-9 ──────────────────────────────────────────────────────────────────
