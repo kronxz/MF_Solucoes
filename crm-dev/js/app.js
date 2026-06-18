@@ -32,6 +32,7 @@ import { initTecnico, carregarDadosTecnico, pararTecnico, renderizarTecnicoPage,
 import { initFinanceiro, carregarDadosFinanceiro, pararFinanceiro, renderizarFinanceiroPage, getFinanceiroMap } from './crm-financeiro.js';
 import { initNotificacoes, carregarNotificacoes, pararNotificacoes, renderizarNotificacoesPage } from './crm-notificacoes.js';
 import { carregarQRCodes } from './crm-qrcodes.js';
+import { iniciarFunil } from './crm-funil.js';
 // crm-leads-landing.js — módulo SPA removido; lp_leads integrado ao Kanban principal via iniciarRealtimeLanding
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────
@@ -387,6 +388,7 @@ async function bootstrapApp() {
   iniciarLixeira(db);
   iniciarArquivados(db);
   iniciarDetails(db);
+  iniciarFunil();
 
   // Handler de seleção de kit para leads landing no modalDetalhes
   document.getElementById('modalDetalhes')?.addEventListener('click', async e => {

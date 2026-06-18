@@ -1,0 +1,124 @@
+/* funil.css — Funil de Vendas / Conversas */
+
+.funil-header {
+  margin-bottom: 24px;
+}
+
+.funil-subtitulo {
+  color: var(--texto-secundario, #64748b);
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.funil-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.funil-categoria {
+  padding: 20px;
+  border-top: 3px solid var(--cat-cor, #3b82f6);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.funil-cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.funil-cat-titulo {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--cat-cor, #3b82f6);
+}
+
+.funil-cat-badge {
+  background: var(--cat-cor, #3b82f6);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.funil-mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.funil-msg-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.funil-msg-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--texto-primario, #e2e8f0);
+}
+
+.funil-msg-preview {
+  font-size: 12px;
+  color: var(--texto-secundario, #94a3b8);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.funil-msg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-copiar,
+.btn-ver-msg {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-copiar {
+  background: var(--cat-cor, #3b82f6);
+  color: #fff;
+}
+
+.btn-ver-msg {
+  background: rgba(255,255,255,0.1);
+  color: var(--texto-primario, #e2e8f0);
+}
+
+.btn-copiar:hover,
+.btn-ver-msg:hover {
+  opacity: 0.82;
+}
+
+.funil-msg-completa {
+  white-space: pre-line;
+  line-height: 1.7;
+  font-size: 14px;
+  color: var(--texto-primario, #e2e8f0);
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .funil-grid {
+    grid-template-columns: 1fr;
+  }
+}
