@@ -216,6 +216,9 @@
         <button id="btn-novo-lead" type="button" class="btn-primary" style="background:var(--verde-acento)">
           ➕ Novo Lead
         </button>
+        <button id="btn-arquivados" type="button" class="btn-secondary">
+          📦 Arquivados
+        </button>
         <button id="btn-lixeira" type="button" class="btn-secondary">
           🗑️ Lixeira
         </button>
@@ -376,6 +379,20 @@
   </main>
 
   <!-- ════════════════════════════════
+       MODAL — ARQUIVADOS
+  ════════════════════════════════ -->
+  <div id="modalArquivados" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Leads arquivados" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">📦 Arquivados</h2>
+        <button id="btn-fechar-arquivados" type="button" class="btn-fechar" aria-label="Fechar arquivados">✕</button>
+      </div>
+      <input id="pesquisaArquivados" type="search" placeholder="Pesquisar lead arquivado..." class="input-busca" autocomplete="off">
+      <div id="listaArquivados" role="list"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
        MODAL — LIXEIRA
   ════════════════════════════════ -->
   <div id="modalLixeira" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Lixeira de leads" aria-hidden="true">
@@ -448,7 +465,7 @@
   </div>
 
   <!-- App Entry Point -->
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=20260618b"></script>
 
 </body>
 </html>

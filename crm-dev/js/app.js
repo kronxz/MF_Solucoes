@@ -18,6 +18,7 @@ import { iniciarNotepad, atualizarDashboardCompleto } from './crm-dashboard.js';
 import { iniciarRealtimeEventos, pararRealtimeEventos } from './crm-events.js';
 import { iniciarKanban, renderizarKanban, exportarBackup } from './crm-kanban.js';
 import { iniciarLixeira, atualizarLeadsLixeira } from './crm-trash.js';
+import { iniciarArquivados, atualizarLeadsArquivados } from './crm-arquivados.js';
 import { iniciarDetails, atualizarLeadsDetails, abrirDetalhes } from './crm-details.js';
 import { renderizarStatsKits, renderizarGraficoLeads } from './crm-stats.js';
 import { iniciarAnalytics, renderizarAnalytics } from './crm-analytics.js';
@@ -127,8 +128,9 @@ function atualizarTudo() {
   }
   if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
 
-  // Lixeira e detalhes sempre sincronizados em segundo plano
+  // Lixeira, arquivados e detalhes sempre sincronizados em segundo plano
   atualizarLeadsLixeira([...leads, ...landingLeads]);
+  atualizarLeadsArquivados([...leads, ...landingLeads]);
   atualizarLeadsDetails([...leads, ...landingLeads]);
 
   // Sincroniza dados técnicos e financeiros
@@ -383,6 +385,7 @@ async function bootstrapApp() {
   iniciarMonitorConexao();
   iniciarNavegacao();
   iniciarLixeira(db);
+  iniciarArquivados(db);
   iniciarDetails(db);
 
   // Handler de seleção de kit para leads landing no modalDetalhes

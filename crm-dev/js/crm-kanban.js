@@ -118,6 +118,7 @@ function criarCardHtml(lead) {
     <button type="button" class="btn-card btn-avancar" data-mover="${lead.id}">👉 Avançar</button>
     <button type="button" class="btn-card btn-voltar" data-voltar="${lead.id}">👈 Voltar</button>
     <button type="button" class="btn-card btn-excluir" data-excluir="${lead.id}">🗑️ Excluir</button>
+    <button type="button" class="btn-card btn-arquivar" data-arquivar="${lead.id}">📦 Arquivar</button>
     <button type="button" class="btn-card btn-detalhes" data-detalhes="${lead.id}">📊 Detalhes</button>
     <button type="button" class="btn-card btn-proposta" data-proposta="${lead.id}">📄 Proposta</button>
     <button type="button" class="btn-card btn-fechar-venda" data-fechar="${lead.id}">💰 Fechar Venda</button>
@@ -196,12 +197,13 @@ export function iniciarKanban(db, onDetalhes) {
 
   // Delegação de eventos: todos os botões de card
   board.addEventListener('click', e => {
-    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
+    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
     if (!btn) return;
 
     if (btn.dataset.mover) moverLead(btn.dataset.mover);
     else if (btn.dataset.voltar) voltarLead(btn.dataset.voltar);
     else if (btn.dataset.excluir) excluirLead(btn.dataset.excluir);
+    else if (btn.dataset.arquivar) arquivarLead(btn.dataset.arquivar);
     else if (btn.dataset.detalhes && _onDetalhes) _onDetalhes(btn.dataset.detalhes);
     else if (btn.dataset.proposta) abrirProposta(btn.dataset.proposta);
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);
@@ -335,6 +337,20 @@ async function excluirLead(id) {
   } catch (err) {
     console.error(`[LEAD_ACTION] excluirLead ERRO — id:${id} col:${col}`, err);
     toast('Não foi possível excluir o lead. Verifique o console.', 'error');
+  }
+}
+
+async function arquivarLead(id) {
+  if (!confirm('Arquivar este lead?')) return;
+  const lead = _leads.find(l => l.id === id);
+  if (!lead) { toast('Lead não encontrado', 'error'); return; }
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  try {
+    await updateDoc(doc(leadDb, col, id), { status: 'arquivado', arquivadoEm: new Date().toISOString() });
+    toast('Lead arquivado', 'info');
+  } catch (err) {
+    console.error('[LEAD_ACTION] arquivarLead ERRO', err);
+    toast('Não foi possível arquivar o lead.', 'error');
   }
 }
 
