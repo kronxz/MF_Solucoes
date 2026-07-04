@@ -52,12 +52,80 @@ export function iniciarDetails(db) {
   document.getElementById('modalDetalhes')?.addEventListener('click', async e => {
     if (e.target.id === 'btnEditarLead') {
       const lead = _leads.find(l => l.id === _leadAtualId);
-      if (lead) ativarModoEdicao(lead);
+      if (lead) {
+        ativarModoEdicao(lead);
+        // Rastreia quais campos foram editados manualmente pelo usuário
+        const _editadoManual = new Set();
+        ['edit-kwp','edit-geracao','edit-economia','edit-payback'].forEach(id => {
+          document.getElementById(id)?.addEventListener('input', () => _editadoManual.add(id));
+        });
+
+        // Live recalc: só sobrescreve campos que o usuário NÃO editou manualmente
+        const recalcKit = () => {
+          const pot = parseFloat(document.getElementById('edit-potencia-placa')?.value) || 580;
+          const pl  = parseFloat(document.getElementById('edit-placas')?.value) || 0;
+          const tar = parseFloat(lead.tarifa) || 0.95;
+          const hsp = parseFloat(lead.hsp) || 4.5;
+          const inv = parseFloat(document.getElementById('edit-investimento')?.value) || parseFloat(lead.investimento) || 0;
+          if (!pl) return;
+          const kwp      = Math.round(pl * pot / 10) / 100;
+          const geracao  = Math.round(kwp * hsp * 30 * 0.80);
+          const economia = Math.round(geracao * tar * 100) / 100;
+          const payback  = inv ? Math.round((inv / (economia * 12)) * 10) / 10 : 0;
+          const set = (id, v) => {
+            if (_editadoManual.has(id)) return; // respeita edição manual
+            const el = document.getElementById(id);
+            if (el) el.value = v;
+          };
+          set('edit-kwp', kwp);
+          set('edit-geracao', geracao);
+          set('edit-economia', economia);
+          set('edit-payback', payback);
+        };
+        ['edit-potencia-placa','edit-placas','edit-investimento'].forEach(id => {
+          document.getElementById(id)?.addEventListener('input', recalcKit);
+          document.getElementById(id)?.addEventListener('change', recalcKit);
+        });
+      }
     } else if (e.target.id === 'btnCancelarEdicao') {
       const lead = _leads.find(l => l.id === _leadAtualId);
       if (lead) preencherAbaLead(lead);
     } else if (e.target.id === 'btnSalvarEdicao') {
       await salvarEdicaoLead();
+    }
+
+    // Seleção de kit na aba Financiamento
+    const btnKit = e.target.closest('[data-selecionar-kit]');
+    if (btnKit && _leadAtualId && _db) {
+      const tipo = btnKit.dataset.selecionarKit;
+      const kitUpdates = {
+        kitEscolhido:    btnKit.dataset.kitNome,
+        sistema:         btnKit.dataset.kitNome,
+        kwp:             parseFloat(btnKit.dataset.kitKwp)    || 0,
+        placas:          parseInt(btnKit.dataset.kitPlacas)   || 0,
+        geracao:         parseFloat(btnKit.dataset.kitGeracao) || 0,
+        investimento:    parseFloat(btnKit.dataset.kitInvestimento) || 0,
+        economia:        parseFloat(btnKit.dataset.kitEconomia)     || 0,
+        payback:         parseFloat(btnKit.dataset.kitPayback)      || 0,
+        kitTipo:         tipo,
+        kitSelecionadoEm: new Date().toISOString()
+      };
+      try {
+        btnKit.disabled = true;
+        btnKit.textContent = '⏳ Salvando...';
+        const leadKit = _leads.find(l => l.id === _leadAtualId);
+        const colKit  = leadKit?.origemSistema === 'landing' ? 'lp_leads' : 'leads';
+        await updateDoc(doc(_db, colKit, _leadAtualId), kitUpdates);
+        if (leadKit) Object.assign(leadKit, kitUpdates);
+        btnKit.textContent = '✅ Kit selecionado!';
+        toast(`Kit ${kitUpdates.kitEscolhido} selecionado`, 'success');
+        preencherAbaLead(_leads.find(l => l.id === _leadAtualId));
+      } catch (err) {
+        console.error('[CRM-Details] selecionarKit:', err);
+        btnKit.disabled = false;
+        btnKit.textContent = '✅ Selecionar este kit';
+        toast('Erro ao selecionar kit', 'error');
+      }
     }
   });
 
@@ -69,7 +137,9 @@ export function iniciarDetails(db) {
     if (_debounceObs) clearTimeout(_debounceObs);
     _debounceObs = setTimeout(async () => {
       try {
-        await updateDoc(doc(_db, 'leads', _leadAtualId), {
+        const leadObs = _leads.find(l => l.id === _leadAtualId);
+        const colObs = leadObs?.origemSistema === 'landing' ? 'lp_leads' : 'leads';
+        await updateDoc(doc(_db, colObs, _leadAtualId), {
           observacoes: obsBox.value,
           observacoesAtualizadoEm: new Date().toISOString()
         });
@@ -345,10 +415,21 @@ function ativarModoEdicao(lead) {
   ${campoEdit('🏢', 'Concessionária', 'edit-concessionaria', 'text', lead.concessionaria || lead.distribuidora)}
   ${campoEdit('💡', 'Conta de Luz (R$)', 'edit-valor', 'number', lead.valor, 'min="0" step="0.01"')}
   ${campoEdit('⚡', 'Consumo (kWh/mês)', 'edit-consumo', 'number', lead.consumo, 'min="0"')}
-  ${campoEdit('🔋', 'Potência do sistema (kWp)', 'edit-kwp', 'number', lead.kwp, 'min="0" step="0.01"')}
-  ${campoEdit('📈', 'Geração Mensal (kWh)', 'edit-geracao', 'number', lead.geracao || lead.geracaoMensal, 'min="0"')}
+  <label style="${EDIT_LABEL_STYLE}">⚡ Potência da placa (Wp)
+    <select id="edit-potencia-placa" style="${EDIT_INPUT_STYLE}">
+      ${[400,450,500,540,580,600,650,700,750].map(w =>
+        `<option value="${w}"${(lead.potenciaPlaca||580)==w?' selected':''}>${w} W</option>`
+      ).join('')}
+    </select>
+  </label>
+  ${campoEdit('🧩', 'Nº de placas', 'edit-placas', 'number', lead.placas || '', 'min="1" step="1"')}
+  ${campoEdit('🔌', 'Inversor (kW)', 'edit-inversor-kw', 'number', lead.inversorKw || '', 'min="0" step="0.5"')}
   ${campoEdit('💰', 'Investimento (R$)', 'edit-investimento', 'number', lead.investimento, 'min="0" step="0.01"')}
-  ${campoEdit('💸', 'Economia Mensal (R$)', 'edit-economia', 'number', lead.economia, 'min="0" step="0.01"')}
+  <hr style="border-color:#1e293b;margin:4px 0">
+  <small style="color:#64748b;font-size:11px">🔄 Auto-calculados ao salvar — editáveis manualmente:</small>
+  ${campoEdit('🔋', 'kWp total', 'edit-kwp', 'number', lead.kwp, 'min="0" step="0.01"')}
+  ${campoEdit('📈', 'Geração Mensal (kWh)', 'edit-geracao', 'number', lead.geracao || lead.geracaoMensal, 'min="0"')}
+  ${campoEdit('💸', 'Economia Real (R$/mês)', 'edit-economia', 'number', lead.economia, 'min="0" step="0.01"')}
   ${campoEdit('⏳', 'Payback (anos)', 'edit-payback', 'number', lead.payback, 'min="0" step="0.1"')}
 </div>`;
 }
@@ -364,11 +445,29 @@ async function salvarEdicaoLead() {
   const concessionaria = get('edit-concessionaria').trim();
   const valorStr = get('edit-valor');
   const consumoStr = get('edit-consumo');
-  const kwpStr = get('edit-kwp');
-  const geracaoStr = get('edit-geracao');
   const investimentoStr = get('edit-investimento');
-  const economiaStr = get('edit-economia');
-  const paybackStr = get('edit-payback');
+  const potenciaPlacaStr = get('edit-potencia-placa');
+  const placasStr = get('edit-placas');
+  const inversorKwStr = get('edit-inversor-kw');
+
+  const potenciaPlaca = potenciaPlacaStr ? parseFloat(potenciaPlacaStr) : 0;
+  const placas        = placasStr        ? parseFloat(placasStr)        : 0;
+  const leadAtual     = _leads.find(l => l.id === _leadAtualId);
+  const hsp = parseFloat(leadAtual?.hsp) || 4.5;
+
+  // kWp: recalcula automaticamente se placas e potência foram definidos
+  // Geração: recalcula se kWp mudou
+  // Economia e Payback: SEMPRE usa o valor do campo (editado manualmente pelo usuário)
+  let kwpCalc, geracaoCalc;
+  if (placas && potenciaPlaca) {
+    kwpCalc     = Math.round(placas * potenciaPlaca / 10) / 100;
+    geracaoCalc = Math.round(kwpCalc * hsp * 30 * 0.80);
+  }
+
+  const kwpStr      = kwpCalc      !== undefined ? String(kwpCalc)      : get('edit-kwp');
+  const geracaoStr  = geracaoCalc  !== undefined ? String(geracaoCalc)  : get('edit-geracao');
+  const economiaStr = get('edit-economia'); // sempre respeita edição manual
+  const paybackStr  = get('edit-payback');  // sempre respeita edição manual
 
   if (!nome) { toast('Nome não pode ser vazio', 'error'); return; }
   if (!telefone) { toast('Telefone não pode ser vazio', 'error'); return; }
@@ -396,9 +495,17 @@ async function salvarEdicaoLead() {
   if (investimento !== undefined) updates.investimento = investimento;
   if (economia !== undefined) updates.economia = economia;
   if (payback !== undefined) updates.payback = payback;
+  if (potenciaPlaca) updates.potenciaPlaca = potenciaPlaca;
+  if (placas) updates.placas = placas;
+  const inversorKw = inversorKwStr ? parseFloat(inversorKwStr) : undefined;
+  if (inversorKw) updates.inversorKw = inversorKw;
+  // Limpa kits salvos para que o motor recalcule com os novos valores
+  if (placas || potenciaPlaca) updates.kitsDisponiveis = null;
 
   try {
-    await updateDoc(doc(_db, 'leads', _leadAtualId), updates);
+    const leadSave = _leads.find(l => l.id === _leadAtualId);
+    const colSave = leadSave?.origemSistema === 'landing' ? 'lp_leads' : 'leads';
+    await updateDoc(doc(_db, colSave, _leadAtualId), updates);
 
     // Atualiza lead localmente para uso imediato (PDF não usa cache antigo)
     const lead = _leads.find(l => l.id === _leadAtualId);

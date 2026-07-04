@@ -3583,8 +3583,12 @@ Number(lead.valor || lead.contaDeLuz || 0)
     geracaoMensal * 12
 
   // ECONOMIA
-  const economiaMensal =
-  Math.min(geracaoMensal * tarifa, valorConta)
+  // Se lead.economia foi definido manualmente no CRM, respeita esse valor.
+  // Caso contrário, calcula descontando R$85 de resíduo mínimo (CIP + mínimo ENEL bifásico).
+  const _residuoMinimo = 85
+  const economiaMensal = lead.economia
+    ? Number(lead.economia)
+    : Math.min(geracaoMensal * tarifa, Math.max(valorConta - _residuoMinimo, 0))
 
   const economiaAnual =
     economiaMensal * 12
@@ -3787,12 +3791,18 @@ Number(dados.geracaoMensal || 0)
 const tarifaEnergia =
 Number(lead.tarifa || 0.95)
 
+// Mínimo residual ENEL: CIP (~R$30) + mínimo bifásico (~R$55) = R$85
+const _residuoMinimo = 85
+
 // economia mensal REAL
-const economiaMensal =
-Math.min(
-  geracaoMensalSistema * tarifaEnergia,
-  contaAtual
-)
+// Se lead.economia foi definido manualmente no CRM, usa ele direto.
+// Caso contrário, calcula descontando sempre o resíduo mínimo (nunca zera a conta).
+const economiaMensal = lead.economia
+  ? Number(lead.economia)
+  : Math.min(
+      geracaoMensalSistema * tarifaEnergia,
+      Math.max(contaAtual - _residuoMinimo, 0)
+    )
 
 // economia anual
 const economiaAnual =
@@ -4041,15 +4051,11 @@ criarGraficoViabilidade({
   investimento:
   Number(lead.investimento || 0),
 
-  economia:
-  Number(
-    lead.economia ||
-    lead.economiaMensal ||
-    0
-  ),
+  economia: dados.economia,
 
   consumoMensal:
   Number(
+    dados.consumoMensal ||
     lead.consumoMensal ||
     lead.consumo ||
     0

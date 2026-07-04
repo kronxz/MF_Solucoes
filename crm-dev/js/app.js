@@ -10,7 +10,7 @@ import {
 import {
   collection, query, where, orderBy, limit, onSnapshot, getFirestore, doc, updateDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { LEADS_LIMIT } from './crm-config.js';
 
 // Módulos CRM Dev
@@ -240,19 +240,7 @@ function iniciarRealtimeLeads(userId) {
 function iniciarRealtimeLanding() {
   if (unsubscribeLanding) { unsubscribeLanding(); }
 
-  const PROD_CONFIG = {
-    apiKey:            'AIzaSyD8OBOl1hUfsrWWT0-L19uuI-F273IvBgU',
-    authDomain:        'mf-solucoes-crm.firebaseapp.com',
-    projectId:         'mf-solucoes-crm',
-    storageBucket:     'mf-solucoes-crm.firebasestorage.app',
-    messagingSenderId: '492242482187',
-    appId:             '1:492242482187:web:34c99a57f3b99c2260030e'
-  };
-  const existingApp = getApps().find(a => a.name === 'lp-prod');
-  const prodApp     = existingApp || initializeApp(PROD_CONFIG, 'lp-prod');
-  const dbProd      = getFirestore(prodApp);
-
-  const q = query(collection(dbProd, 'lp_leads'), orderBy('createdAt', 'desc'));
+  const q = query(collection(db, 'lp_leads'), orderBy('createdAt', 'desc'));
 
   unsubscribeLanding = onSnapshot(q, snap => {
     landingLeads = snap.docs.map(d => {
@@ -398,14 +386,7 @@ async function bootstrapApp() {
     if (!lead || lead.origemSistema !== 'landing') return;
 
     const kit = JSON.parse(btn.dataset.kit);
-    const { db: leadDb } = (() => {
-      const prodApp = getApps().find(a => a.name === 'lp-prod');
-      const d = prodApp ? getFirestore(prodApp) : null;
-      return { db: d };
-    })();
-    if (!leadDb) return;
-
-    await updateDoc(doc(leadDb, 'lp_leads', lead.id), {
+    await updateDoc(doc(db, 'lp_leads', lead.id), {
       kitSelecionado:    kit.nome,
       potenciaSistema:   kit.kwp,
       quantidadePlacas:  kit.placas,

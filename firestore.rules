@@ -1,33 +1,163 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Único usuário admin do projeto (marcos_felipe_eng@hotmail.com) — usado
+    // para restringir coleções sensíveis (ex: bot_commands, que pode disparar
+    // atualização remota de código nos bots) além do "qualquer autenticado".
+    function isAdmin() {
+      return request.auth != null && request.auth.uid == 'gddlz2h2xrgcPvJyHMVYzdhfgCr2';
+    }
+
+    // ── leads: CRM operacional — acesso só para usuários autenticados ──
     match /leads/{leadId} {
-      allow read, write: if true;
+      allow read, write, delete: if request.auth != null;
+
+      // Subcoleção de timeline do lead
+      match /timeline/{eventId} {
+        allow read, write, delete: if request.auth != null;
+      }
     }
 
+    // ── eventos: agenda e eventos do CRM ──
     match /eventos/{eventoId} {
-      allow read, write: if true;
+      allow read, write, delete: if request.auth != null;
     }
 
+    // ── agendamentos: visitas técnicas marcadas via Bot Telegram ──
+    match /agendamentos/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── eventos_crm: alias legado ──
+    match /eventos_crm/{eventoId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── crm_config: configurações e notas do CRM por usuário ──
+    match /crm_config/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── tecnico_dados: dados técnicos das instalações (nome real) ──
+    match /tecnico_dados/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── financeiro_dados: dados financeiros das instalações (nome real) ──
+    match /financeiro_dados/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── notificacoes_logs: notificações internas do CRM (nome real) ──
+    match /notificacoes_logs/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── instalacoes: registros de instalações solares ──
+    match /instalacoes/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── aliases antigos (mantidos por retrocompatibilidade) ──
+    match /crm-tecnico/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /crm-notificacoes/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /crm-financeiro/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── lp_leads: escrita pública (landing page) + leitura para CRM autenticado ──
     match /lp_leads/{leadId} {
-      allow read, write: if true;
+      allow create: if
+        request.resource.data.nome     is string &&
+        request.resource.data.telefone is string &&
+        request.resource.data.nome.size()     >= 2  &&
+        request.resource.data.nome.size()     <= 120 &&
+        request.resource.data.telefone.size() >= 8  &&
+        request.resource.data.telefone.size() <= 20 &&
+        request.resource.data.keys().size()   <= 30 &&
+        request.resource.data.status is string &&
+        request.resource.data.status == 'novo' &&
+        (
+          !('origem' in request.resource.data) ||
+          (request.resource.data.origem is string &&
+           request.resource.data.origem.size() <= 50)
+        ) &&
+        (
+          !('score' in request.resource.data) ||
+          (request.resource.data.score is int &&
+           request.resource.data.score >= 0 &&
+           request.resource.data.score <= 100)
+        );
+
+      allow read, list, update: if request.auth != null;
+      allow delete: if false;
     }
 
+    // ── landing_visits: analytics de visita (create público, leitura para CRM) ──
     match /landing_visits/{visitId} {
-      allow write: if true;
-      allow read: if request.auth != null;
+      allow create: if
+        request.resource.data.sessionId is string &&
+        request.resource.data.sessionId.size() >= 5 &&
+        request.resource.data.sessionId.size() <= 60 &&
+        request.resource.data.keys().size()    <= 25;
+
+      allow read, list: if request.auth != null;
+      allow update, delete: if false;
     }
 
-    match /returno_ao_site/{docId} {
-      allow read: if true;
-      allow create, update: if request.auth != null;
+    // ── Controle Remoto / Heartbeat: instâncias de bots e comandos ──
+    match /bot_instances/{docId} {
+      allow read, list: if request.auth != null;
+      allow write:      if false; // escrito só pelo Admin SDK no VPS
+    }
+    match /bot_health/{docId} {
+      allow read, list: if request.auth != null;
+      allow write:      if false;
+    }
+    match /bot_commands/{docId} {
+      // Restrito ao admin: um comando "update" aqui faz o bot no VPS baixar e
+      // executar código remoto — "qualquer autenticado" era uma porta aberta
+      // demais pra isso (achado em auditoria de segurança, 2026-07-03).
+      allow read, write: if isAdmin();
+    }
+    match /bot_lock/{docId} {
+      allow read, list: if request.auth != null;
+      allow write:      if false;
     }
 
+    // ── Document Manager (CC-9): metadados de documentos do Electron ──
+    match /docs_clientes/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /docs_propostas/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /docs_obras/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /docs_laudos/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /docs_orcamentos/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    match /docs_midias/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── ads_spend: lançamento manual de investimento em campanhas (Analytics Central) ──
+    match /ads_spend/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
+    // ── Todas as outras coleções: acesso zero via cliente ──
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
-
   }
 }

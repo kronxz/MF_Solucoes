@@ -29,11 +29,13 @@ export function calcularKitsFallback(lead) {
     return k * 2850;
   };
 
+  const RESIDUO_MINIMO = 85; // CIP (~R$30) + mínimo bifásico ENEL (~R$55)
+
   const buildKit = (fator, nome) => {
     const kwp = (Math.ceil((baseKwp * fator * 1000) / potPlaca) * potPlaca) / 1000;
     const placas = Math.ceil((baseKwp * fator * 1000) / potPlaca);
     const geracao = kwp * hsp * 30 * 0.80;
-    const economia = geracao * tarifa;
+    const economia = Math.min(geracao * tarifa, Math.max(conta - RESIDUO_MINIMO, 0));
     const investimento = calcInv(kwp);
     const payback = investimento / (economia * 12);
     return {
@@ -84,11 +86,22 @@ export function renderHtmlKitResumo(lead, esc) {
   const inv = Number(lead.investimento || 0);
   const tag = estimado ? ' <small style="color:#f59e0b">(estimado)</small>' : '';
 
-  const cards = Object.entries(kits).map(([, kit]) => `
+  const cards = Object.entries(kits).map(([tipo, kit]) => `
 <div class="glass-card" style="padding:12px;margin-bottom:8px;font-size:13px">
   <b style="color:var(--verde-acento)">${esc(kit.nome)}</b>
   <p style="margin:6px 0 0">📦 ${kit.kwp} kWp · 🧩 ${kit.placas} placas · ⚡ ${kit.geracao} kWh/mês</p>
   <p style="margin:4px 0 0">💰 R$ ${Number(kit.investimento).toLocaleString('pt-BR')} · 💸 R$ ${kit.economia}/mês · ⏳ ${kit.payback}a</p>
+  <button data-selecionar-kit="${tipo}"
+    data-kit-nome="${esc(kit.nome)}"
+    data-kit-kwp="${kit.kwp}"
+    data-kit-placas="${kit.placas}"
+    data-kit-geracao="${kit.geracao}"
+    data-kit-investimento="${kit.investimento}"
+    data-kit-economia="${kit.economia}"
+    data-kit-payback="${kit.payback}"
+    style="margin-top:8px;padding:5px 14px;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">
+    ✅ Selecionar
+  </button>
 </div>`).join('');
 
   return `
@@ -103,7 +116,7 @@ export function renderHtmlFinanciamento(lead, esc) {
   const conta = parseFloat(lead.valor || lead.contaDeLuz) || 0;
   const financiamentos = lead.financiamentos || gerarFinanciamentos(kits, conta);
 
-  const kitHtml = Object.entries(kits).map(([, kit]) => `
+  const kitHtml = Object.entries(kits).map(([tipo, kit]) => `
 <div class="glass-card" style="padding:16px;margin-bottom:12px">
   <div style="font-size:18px;font-weight:700;color:var(--verde-acento);margin-bottom:10px">⚡ ${esc(kit.nome)}</div>
   <p>📦 Potência: <b>${kit.kwp} kWp</b></p>
@@ -112,6 +125,17 @@ export function renderHtmlFinanciamento(lead, esc) {
   <p>💸 Economia: <b>R$ ${kit.economia}/mês</b></p>
   <p>🧩 Placas: <b>${kit.placas}</b></p>
   <p>⏳ Payback: <b>${kit.payback} anos</b></p>
+  <button data-selecionar-kit="${tipo}"
+    data-kit-nome="${esc(kit.nome)}"
+    data-kit-kwp="${kit.kwp}"
+    data-kit-placas="${kit.placas}"
+    data-kit-geracao="${kit.geracao}"
+    data-kit-investimento="${kit.investimento}"
+    data-kit-economia="${kit.economia}"
+    data-kit-payback="${kit.payback}"
+    style="margin-top:10px;padding:7px 18px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+    ✅ Selecionar este kit
+  </button>
 </div>`).join('');
 
   const parcColor = (parcela, c) => Number(parcela) <= c ? '#22c55e' : '#f59e0b';

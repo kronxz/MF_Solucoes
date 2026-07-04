@@ -2,20 +2,15 @@
 // Handles: board render, card HTML, drag-and-drop, mover/voltar, excluir, whatsapp, proposta, fechar
 
 import {
-  doc, updateDoc, addDoc, collection, deleteDoc, getFirestore
+  doc, updateDoc, addDoc, collection, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getApps } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from '../firebase/config.js';
 
 // ─── HELPER DE ORIGEM ─────────────────────────────────────────
 function getLeadSource(lead) {
   if (lead?.origemSistema === 'landing') {
-    const prodApp = getApps().find(a => a.name === 'lp-prod');
-    return {
-      db:         prodApp ? getFirestore(prodApp) : _db,
-      collection: 'lp_leads'
-    };
+    return { db: _db, collection: 'lp_leads' };
   }
   return { db: _db, collection: 'leads' };
 }

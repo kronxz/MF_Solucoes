@@ -40,11 +40,13 @@ export function criarGraficoViabilidade(dados){
 
   const tir = 52.19
 
-  // 🔥 VALOR KWH
-
-  const valorKwh =
-  economiaMensal /
-  Number(dados.consumoMensal || 1)
+  // 🔥 VALOR KWH DO SISTEMA FV
+  // = investimento ÷ total de kWh gerado em 25 anos
+  const geracaoMensal = Number(dados.geracaoMensal || dados.geracao || economiaMensal / Number(dados.tarifa || 0.95))
+  const totalKwhGerado25anos = geracaoMensal * 12 * 25
+  const valorKwh = totalKwhGerado25anos > 0
+    ? valorSistema / totalKwhGerado25anos
+    : 0
 
   // 🔥 PREENCHE HTML
 
