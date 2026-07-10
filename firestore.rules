@@ -29,6 +29,11 @@ service cloud.firestore {
       allow read, write, delete: if request.auth != null;
     }
 
+    // ── atendimentos: métrica de atendimentos dos bots (Conector Jarvis ②) ──
+    match /atendimentos/{docId} {
+      allow read, write, delete: if request.auth != null;
+    }
+
     // ── eventos_crm: alias legado ──
     match /eventos_crm/{eventoId} {
       allow read, write, delete: if request.auth != null;

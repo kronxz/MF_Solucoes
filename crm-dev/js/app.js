@@ -24,6 +24,11 @@ import { renderizarStatsKits, renderizarGraficoLeads } from './crm-stats.js';
 import { iniciarAnalytics, renderizarAnalytics } from './crm-analytics.js';
 import { renderizarVisitas } from './crm-visitas.js';
 import {
+  iniciarRealtimeAgendamentos, pararRealtimeAgendamentos,
+  carregarConfigAgenda, renderizarAgenda, renderizarSlotsLivres,
+  setLeadsDisponiveis, abrirModalAgenda, salvarDoModal, mudarStatusAgendamento
+} from './crm-agenda.js';
+import {
   toast, setGlobalLoading, flashSync, showKanbanSkeleton, showDashboardSkeleton,
   setSyncStatus, iniciarSidebarMobile, bindEscapeModals, iniciarMonitorConexao
 } from './crm-utils.js';
@@ -48,6 +53,7 @@ let _leadsMap = new Map();
 let _atualizarTimer = null;
 let landingLeads = [];
 let unsubscribeLanding = null;
+let agendamentos = [];
 
 // ─── NAVEGAÇÃO ────────────────────────────────────────────────
 function mostrarPagina(pageId) {
@@ -74,6 +80,7 @@ function mostrarPagina(pageId) {
   }
   if (pageId === 'analyticsPage') renderizarAnalytics(eventos, leads, eventosSyncEm, landingLeads);
   if (pageId === 'visitasPage') renderizarVisitas(eventos);
+  if (pageId === 'agendaPage') renderizarAgenda(agendamentos);
   if (pageId === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
   if (pageId === 'leadsPage') {
     const leadsUnificados = [...leads, ...landingLeads];
@@ -129,6 +136,9 @@ function atualizarTudo() {
   }
   if (paginaAtiva === 'dashboardPage') atualizarDashboardCompleto(leads, eventos, landingLeads);
 
+  // Leads disponíveis para o seletor da Agenda
+  setLeadsDisponiveis([...leads, ...landingLeads]);
+
   // Lixeira, arquivados e detalhes sempre sincronizados em segundo plano
   atualizarLeadsLixeira([...leads, ...landingLeads]);
   atualizarLeadsArquivados([...leads, ...landingLeads]);
@@ -181,6 +191,7 @@ function limparListeners() {
   pararTecnico();
   pararFinanceiro();
   pararNotificacoes();
+  pararRealtimeAgendamentos();
 }
 
 function iniciarRealtimeLeads(userId) {
@@ -293,6 +304,20 @@ function iniciarRealtimeEventosCRM(userId) {
   );
 }
 
+function iniciarRealtimeAgendamentosCRM() {
+  iniciarRealtimeAgendamentos(
+    db,
+    lista => {
+      agendamentos = lista;
+      // Só re-renderiza se a aba Agenda estiver visível (isolado das demais)
+      if (document.getElementById('agendaPage')?.classList.contains('active')) {
+        renderizarAgenda(agendamentos);
+      }
+    },
+    err => console.warn('[CRM-Agenda] erro no realtime de agendamentos:', err)
+  );
+}
+
 // ─── AUTH & RUNTIME GATE ──────────────────────────────────────
 let isAppInitialized = false;
 
@@ -336,6 +361,8 @@ onAuthStateChanged(auth, async (user) => {
   iniciarRealtimeLeads(user.uid);
   iniciarRealtimeLanding();
   iniciarRealtimeEventosCRM(user.uid);
+  await carregarConfigAgenda(db);
+  iniciarRealtimeAgendamentosCRM();
 
   initInstalacoes(db);
   initTecnico(db);
@@ -419,6 +446,7 @@ async function bootstrapApp() {
   });
   iniciarAnalytics();
   iniciarInstalacoesPage();
+  iniciarAgendaPage();
 
   // Botão de refresh na página QR Codes
   document.getElementById('btn-refresh-qr')?.addEventListener('click', () => carregarQRCodes());
@@ -456,6 +484,43 @@ function atualizarOpcoesInstalacao() {
       option.textContent = `${lead.nome || 'Lead sem nome'} — ${lead.status || 'Sem status'}`;
       select.appendChild(option);
     });
+}
+
+function iniciarAgendaPage() {
+  const btn = document.getElementById('btnCalcularSlots');
+  btn?.addEventListener('click', () => {
+    const tipo = document.getElementById('agendaTipo')?.value || 'visita_tecnica';
+    const zona = document.getElementById('agendaZona')?.value.trim() || null;
+    renderizarSlotsLivres({ tipo, zona, n: 6 });
+  });
+
+  // Clicar num horário livre → abrir modal de agendamento (slot-first)
+  document.getElementById('agendaSlotsLivres')?.addEventListener('click', e => {
+    const s = e.target.closest('.slot-livre');
+    if (!s) return;
+    const tipo = document.getElementById('agendaTipo')?.value || 'visita_tecnica';
+    abrirModalAgenda({ inicio: s.dataset.inicio, tipo });
+  });
+
+  // Ações nos cards de agendamento (concluir/reagendar/editar/cancelar)
+  document.getElementById('agendaConteudo')?.addEventListener('click', async e => {
+    const b = e.target.closest('.agenda-btn');
+    if (!b) return;
+    const { id, acao } = b.dataset;
+    try {
+      if (acao === 'cancelar') { await mudarStatusAgendamento(db, id, 'cancelado'); toast('Agendamento cancelado', 'success'); }
+      else if (acao === 'concluir') { await mudarStatusAgendamento(db, id, 'concluido'); toast('Marcado como concluído', 'success'); }
+      else if (acao === 'editar') { abrirModalAgenda({ editId: id }); }
+      else if (acao === 'reagendar') { await mudarStatusAgendamento(db, id, 'reagendar'); abrirModalAgenda({ editId: id }); toast('Ajuste o horário e salve', 'info'); }
+    } catch (err) { console.error('[Agenda] ação', acao, err); toast('Erro: ' + err.message, 'error'); }
+  });
+
+  // Salvar do modal (criado dinamicamente → delegação no body)
+  document.body.addEventListener('click', async e => {
+    if (e.target?.id !== 'agSalvar') return;
+    try { await salvarDoModal(); toast('Agendamento salvo', 'success'); }
+    catch (err) { toast(err.message || 'Erro ao salvar', 'error'); }
+  });
 }
 
 function iniciarInstalacoesPage() {

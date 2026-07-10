@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="./css/modal.css">
   <link rel="stylesheet" href="./css/mobile.css">
   <link rel="stylesheet" href="./css/funil.css">
+  <link rel="stylesheet" href="./css/agenda.css">
 </head>
 
 <body>
@@ -51,6 +52,9 @@
       </button>
       <button id="btn-visitas" class="sidebar-btn" data-page="visitasPage">
         <span class="btn-icon">👁️</span> Visitas
+      </button>
+      <button id="btn-agenda" class="sidebar-btn" data-page="agendaPage">
+        <span class="btn-icon">📅</span> Agenda
       </button>
       <button id="btn-leads" class="sidebar-btn" data-page="leadsPage">
         <span class="btn-icon">📋</span> Leads
@@ -213,6 +217,34 @@
       <h1>👁️ Visitas</h1>
       <p id="visitasMeta" class="crm-page-meta">Carregando sessões...</p>
       <div id="visitasConteudo" class="visitas-list"></div>
+    </section>
+
+    <!-- ─── AGENDA PAGE (Passo 4 / slotEngine) ─── -->
+    <section id="agendaPage" class="page" aria-label="Agenda">
+      <h1>📅 Agenda</h1>
+      <p id="agendaMeta" class="crm-page-meta">Carregando agendamentos...</p>
+
+      <!-- Painel: próximos horários livres (via slotEngine) -->
+      <div class="agenda-slots-panel glass-card">
+        <div class="agenda-slots-controles">
+          <label>Tipo
+            <select id="agendaTipo">
+              <option value="visita_tecnica">Visita técnica</option>
+              <option value="manutencao">Manutenção</option>
+              <option value="laudo">Laudo</option>
+              <option value="homologacao">Homologação</option>
+            </select>
+          </label>
+          <label>Bairro/zona
+            <input id="agendaZona" type="text" placeholder="ex.: Itaipuaçu" autocomplete="off">
+          </label>
+          <button id="btnCalcularSlots" type="button" class="btn-secondary">🔎 Ver horários livres</button>
+        </div>
+        <div id="agendaSlotsLivres" class="agenda-slots-livres"></div>
+      </div>
+
+      <!-- Lista de agendamentos (fonte: coleção `agendamentos`) -->
+      <div id="agendaConteudo" class="agenda-list"></div>
     </section>
 
     <!-- ─── LEADS PAGE ─── -->
@@ -475,7 +507,7 @@
   </div>
 
   <!-- App Entry Point -->
-  <script type="module" src="./js/app.js?v=20260618d"></script>
+  <script type="module" src="./js/app.js?v=20260710b"></script>
 
 </body>
 </html>
