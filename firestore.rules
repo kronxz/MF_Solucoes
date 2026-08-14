@@ -6,73 +6,85 @@ service cloud.firestore {
     // para restringir coleções sensíveis (ex: bot_commands, que pode disparar
     // atualização remota de código nos bots) além do "qualquer autenticado".
     function isAdmin() {
-      return request.auth != null && request.auth.uid == 'gddlz2h2xrgcPvJyHMVYzdhfgCr2';
+      // UID é o primário; e-mail do admin é FALLBACK anti-lockout (o e-mail vem do
+      // token de auth verificado — não é forjável pelo cliente). Assim, se o UID salvo
+      // estiver defasado, a conta do Marcos ainda entra; estranho logado continua barrado.
+      return request.auth != null && (
+        request.auth.uid == 'gddlz2h2xrgcPvJyHMVYzdhfgCr2' ||
+        request.auth.token.email == 'marcos_felipe_eng@hotmail.com'
+      );
     }
+    // Endurecimento 2026-08-13 (auditoria de segurança): as coleções internas do CRM
+    // passaram de "qualquer autenticado" (request.auth != null) para isAdmin() — assim,
+    // MESMO que o auto-cadastro do Firebase Auth esteja aberto, um estranho logado NÃO lê
+    // PII/financeiro/técnico. Bots (Admin SDK) e scripts Jarvis (token OWNER firebase-tools)
+    // ignoram rules e seguem funcionando; CRM/app logam como o admin → passam. Só existe a
+    // conta admin (confirmado pelo Marcos 2026-08-13). Novo operador = somar UID no isAdmin().
 
     // ── leads: CRM operacional — acesso só para usuários autenticados ──
     match /leads/{leadId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
 
       // Subcoleção de timeline do lead
       match /timeline/{eventId} {
-        allow read, write, delete: if request.auth != null;
+        allow read, write, delete: if isAdmin();
       }
     }
 
     // ── eventos: agenda e eventos do CRM ──
     match /eventos/{eventoId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── agendamentos: visitas técnicas marcadas via Bot Telegram ──
     match /agendamentos/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── atendimentos: métrica de atendimentos dos bots (Conector Jarvis ②) ──
     match /atendimentos/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── eventos_crm: alias legado ──
     match /eventos_crm/{eventoId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── crm_config: configurações e notas do CRM por usuário ──
     match /crm_config/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── tecnico_dados: dados técnicos das instalações (nome real) ──
     match /tecnico_dados/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── financeiro_dados: dados financeiros das instalações (nome real) ──
     match /financeiro_dados/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── notificacoes_logs: notificações internas do CRM (nome real) ──
     match /notificacoes_logs/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── instalacoes: registros de instalações solares ──
     match /instalacoes/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── aliases antigos (mantidos por retrocompatibilidade) ──
     match /crm-tecnico/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /crm-notificacoes/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /crm-financeiro/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── lp_leads: escrita pública (landing page) + leitura para CRM autenticado ──
@@ -99,7 +111,7 @@ service cloud.firestore {
            request.resource.data.score <= 100)
         );
 
-      allow read, list, update: if request.auth != null;
+      allow read, list, update: if isAdmin();
       allow delete: if false;
     }
 
@@ -111,17 +123,17 @@ service cloud.firestore {
         request.resource.data.sessionId.size() <= 60 &&
         request.resource.data.keys().size()    <= 25;
 
-      allow read, list: if request.auth != null;
+      allow read, list: if isAdmin();
       allow update, delete: if false;
     }
 
     // ── Controle Remoto / Heartbeat: instâncias de bots e comandos ──
     match /bot_instances/{docId} {
-      allow read, list: if request.auth != null;
+      allow read, list: if isAdmin();
       allow write:      if false; // escrito só pelo Admin SDK no VPS
     }
     match /bot_health/{docId} {
-      allow read, list: if request.auth != null;
+      allow read, list: if isAdmin();
       allow write:      if false;
     }
     match /bot_commands/{docId} {
@@ -131,33 +143,33 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     match /bot_lock/{docId} {
-      allow read, list: if request.auth != null;
+      allow read, list: if isAdmin();
       allow write:      if false;
     }
 
     // ── Document Manager (CC-9): metadados de documentos do Electron ──
     match /docs_clientes/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /docs_propostas/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /docs_obras/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /docs_laudos/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /docs_orcamentos/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
     match /docs_midias/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── ads_spend: lançamento manual de investimento em campanhas (Analytics Central) ──
     match /ads_spend/{docId} {
-      allow read, write, delete: if request.auth != null;
+      allow read, write, delete: if isAdmin();
     }
 
     // ── Todas as outras coleções: acesso zero via cliente ──
