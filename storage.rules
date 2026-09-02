@@ -2,26 +2,43 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Pasta de backups - apenas admin
+    // Só o admin (Marcos). MESMO padrão do firestore.rules: UID primário + e-mail verificado
+    // como fallback anti-lockout (o e-mail vem do token verificado — não é forjável).
+    // Endurecimento 2026-09-02: /propostas e /anexos guardam PII de cliente; estavam como
+    // "qualquer autenticado" — um estranho auto-cadastrado poderia LISTAR/LER os PDFs.
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.uid == 'gddlz2h2xrgcPvJyHMVYzdhfgCr2' ||
+        (request.auth.token.email == 'marcos_felipe_eng@hotmail.com' &&
+         request.auth.token.email_verified == true)
+      );
+    }
+
+    // Backups - apenas admin
     match /backups/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.token.admin == true;
+      allow read, write: if isAdmin();
     }
-    
-    // Pasta de propostas - usuários autenticados
+
+    // Propostas - apenas admin (PII de cliente)
     match /propostas/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
-    
-    // Pasta de anexos - usuários autenticados
+
+    // Anexos - apenas admin (PII de cliente); limite de 10MB na escrita
     match /anexos/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.resource.size < 10 * 1024 * 1024;
+      allow read:  if isAdmin();
+      allow write: if isAdmin() && request.resource.size < 10 * 1024 * 1024;
     }
-    
-    // Pasta pública (logos, imagens da empresa)
+
+    // Pasta pública (logos, imagens da empresa) — leitura livre (intencional), escrita só admin
     match /public/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.admin == true;
+      allow write: if isAdmin();
+    }
+
+    // Tudo o mais: acesso zero via cliente
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
