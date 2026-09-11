@@ -5,6 +5,7 @@ import {
   doc, getDoc, setDoc
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { formatBRL, parseDataFirestore } from './crm-utils.js';
+import { COLUNAS, TITULOS, normalizarStatus } from './crm-kanban.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
 export function atualizarMetricas(leads) {
@@ -28,6 +29,48 @@ export function atualizarMetricas(leads) {
   set('fechadoTotal', formatBRL(valorFechado));
   set('totalLeads', total);
   set('conversao', conversao + '%');
+}
+
+// ─── FUNIL DE CONVERSÃO (contagem + R$ por estágio) ───────────
+// Fonte única: reusa COLUNAS/TITULOS/normalizarStatus do kanban (sem drift).
+export function calcularFunil(leads) {
+  const ativos = (leads || []).filter(l => {
+    const s = String(l.status || '').toLowerCase();
+    return !l.deletado && s !== 'excluido' && s !== 'arquivado';
+  });
+  const base = {};
+  COLUNAS.forEach(c => { base[c] = { count: 0, valor: 0 }; });
+  ativos.forEach(l => {
+    const s = normalizarStatus(l.status);
+    if (!base[s]) base[s] = { count: 0, valor: 0 };
+    base[s].count++;
+    base[s].valor += parseFloat(l.valor) || 0;
+  });
+  return COLUNAS.map(c => ({
+    stage: c,
+    titulo: TITULOS[c] || c,
+    count: base[c].count,
+    valor: base[c].valor
+  }));
+}
+
+export function renderFunilConversao(leads) {
+  const el = document.getElementById('funilConversao');
+  if (!el) return;
+  const dados = calcularFunil(leads);
+  const total = dados.reduce((a, d) => a + d.count, 0);
+  const maxCount = Math.max(1, ...dados.map(d => d.count));
+  el.innerHTML =
+    `<div class="funil-head"><b>📊 Funil de Conversão</b><span class="funil-total">${total} leads ativos</span></div>` +
+    dados.map(d => {
+      const w = Math.round((d.count / maxCount) * 100);
+      return `<div class="funil-linha">
+        <span class="funil-nome">${d.titulo}</span>
+        <span class="funil-barra"><span class="funil-fill" style="width:${w}%"></span></span>
+        <span class="funil-num">${d.count}</span>
+        <span class="funil-valor">${formatBRL(d.valor)}</span>
+      </div>`;
+    }).join('');
 }
 
 // ─── STATS DE TRÁFEGO (Visitas / Leads por período) ───────────
@@ -106,6 +149,7 @@ export function atualizarAnalyticsMini(eventos) {
 export function atualizarDashboardCompleto(leads, eventos, landingLeads = []) {
   const todos = [...(leads || []), ...(landingLeads || [])];
   atualizarMetricas(todos);
+  renderFunilConversao(todos);
   atualizarTrafico(todos, eventos);
   atualizarAnalyticsMini(eventos);
   atualizarOrigensLeads(todos);

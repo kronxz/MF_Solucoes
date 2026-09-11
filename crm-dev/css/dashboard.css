@@ -382,3 +382,15 @@ body {
   resize: vertical;
   box-sizing: border-box;
 }
+
+/* ── Funil de Conversão (contagem por estágio) — MF 2026-09-11 ── */
+.funil-conversao { padding: 14px 16px; margin-top: 12px; }
+.funil-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.funil-total { color: var(--claro, #cbd5e1); font-size:12px; }
+.funil-linha { display:grid; grid-template-columns: 130px 1fr 42px 92px; align-items:center; gap:10px; padding:5px 0; font-size:12px; }
+.funil-nome { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.funil-barra { background: rgba(255,255,255,.08); border-radius:6px; height:14px; overflow:hidden; }
+.funil-fill { display:block; height:100%; background: linear-gradient(90deg,#0090D4,#22C55E); border-radius:6px; transition:width .3s ease; }
+.funil-num { text-align:right; font-weight:700; }
+.funil-valor { text-align:right; color: var(--claro,#cbd5e1); }
+@media (max-width:768px){ .funil-linha{ grid-template-columns: 96px 1fr 34px; } .funil-valor{ display:none; } }
