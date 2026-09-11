@@ -286,3 +286,12 @@ html, body {
   .card-actions { grid-template-columns: 1fr; }
   .btn-fechar-venda { grid-column: span 1; }
 }
+
+/* Correções mobile — Central de Dados + Visitas PRO (2026-09-11) */
+@media (max-width: 768px) {
+  .vis-charts { grid-template-columns: 1fr; }
+  .vis-canvas-wrap { height: 200px; }
+  .vis-canvas-wrap canvas { height: 100% !important; width: 100% !important; }
+  .seg-filtro { gap: 6px; }
+  #dashboardPage .painel-rapido { padding: 16px; }
+}
