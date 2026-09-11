@@ -31,10 +31,11 @@ function escHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-const COLUNAS = ['novo', 'contato', 'proposta', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
+const COLUNAS = ['novo', 'contato', 'visita', 'proposta', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
 const TITULOS = {
   novo: '🟡 Novos',
   contato: '🔵 Contato',
+  visita: '📅 Visita',
   proposta: '🟠 Proposta',
   fechado: '🟢 Fechado',
   instalacao: '🔧 Instalação',
@@ -59,6 +60,11 @@ export function normalizarStatus(status) {
   const mapa = {
     novo: 'novo',
     contato: 'contato',
+    visita: 'visita',
+    agendado: 'visita',
+    agendada: 'visita',
+    agendamento: 'visita',
+    'visita tecnica': 'visita',
     proposta: 'proposta',
     fechado: 'fechado',
     instalacao: 'instalacao',
@@ -71,6 +77,7 @@ export function normalizarStatus(status) {
 }
 
 function alertaCard(statusColuna, dias) {
+  if (statusColuna === 'visita' && dias >= 2) return { texto: '📅 CONFIRMAR VISITA', cor: '#3b82f6' };
   if (statusColuna === 'proposta' && dias >= 1) return { texto: '🔥 FECHAR HOJE', cor: '#ef4444' };
   if (statusColuna === 'instalacao' && dias >= 7) return { texto: '⚠️ ATRASO', cor: '#f59e0b' };
   if (statusColuna === 'pos-venda' && dias >= 3) return { texto: '⏰ FOLLOW-UP', cor: '#8b5cf6' };
@@ -266,6 +273,12 @@ export function iniciarKanban(db, onDetalhes) {
   }
 
   document.getElementById('btn-novo-lead')?.addEventListener('click', novoLead);
+  // [MF-AI-CHANGE 2026-07-31] modal Novo Lead (substitui prompt() que nao roda no Electron)
+  document.getElementById('formNovoLead')?.addEventListener('submit', salvarNovoLead);
+  document.getElementById('btn-cancelar-novo-lead')?.addEventListener('click', fecharNovoLead);
+  document.getElementById('modalNovoLead')?.addEventListener('click', e => {
+    if (e.target.id === 'modalNovoLead') fecharNovoLead();
+  });
 
   document.getElementById('kanbanBusca')?.addEventListener('input', e => {
     _filtro.busca = e.target.value;
@@ -380,45 +393,79 @@ function abrirProposta(id) {
   if (abrirPropostaLead(lead)) toast('Proposta aberta', 'info');
 }
 
-async function novoLead() {
-  const nome = prompt('Nome do cliente:');
-  if (!nome) return;
-  const telefone = prompt('Telefone:');
-  const valor = prompt('Conta de luz (R$):');
-  const investimento = prompt('Valor do sistema (R$):');
-  const kwp = prompt('Potência do sistema (kWp):');
+// [MF-AI-CHANGE 2026-07-31] "Novo Lead" via MODAL — prompt() NÃO funciona no Electron.
+// Bug: no app (Electron), window.prompt() retorna null na hora → a função saía calada
+// e o botão "não fazia nada" (no Chrome funcionava). Modal HTML funciona nos dois.
+function novoLead() {
+  const modal = document.getElementById('modalNovoLead');
+  if (!modal) return;
+  const form = document.getElementById('formNovoLead');
+  if (form) form.reset();
+  modal.classList.add('ativo');
+  modal.setAttribute('aria-hidden', 'false');
+  setTimeout(() => document.getElementById('nl-nome')?.focus(), 50);
+}
+
+function fecharNovoLead() {
+  const modal = document.getElementById('modalNovoLead');
+  if (!modal) return;
+  modal.classList.remove('ativo');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+async function salvarNovoLead(e) {
+  if (e) e.preventDefault();
+  const nome = (document.getElementById('nl-nome')?.value || '').trim();
+  if (!nome) { toast('Informe o nome do cliente', 'error'); return; }
+  const telefone     = (document.getElementById('nl-telefone')?.value || '').trim();
+  const valor        = (document.getElementById('nl-valor')?.value || '').trim();
+  const investimento = (document.getElementById('nl-investimento')?.value || '').trim();
+  const kwp          = (document.getElementById('nl-kwp')?.value || '').trim();
 
   const utm = JSON.parse(localStorage.getItem('utm') || '{}');
   const kit = JSON.parse(localStorage.getItem('kitSelecionado') || '{}');
 
   const uid = getAuth(app).currentUser?.uid || null;
-  if (!uid) {
-    toast('Usuário não autenticado', 'error');
-    return;
-  }
+  if (!uid) { toast('Usuário não autenticado', 'error'); return; }
 
   const tel = String(telefone || '').replace(/\D/g, '');
+  const agora = new Date().toISOString();
 
-  await addDoc(collection(_db, 'leads'), {
-    nome, telefone, telefoneDigitos: tel, valor,
-    sistema: kit?.sistema || '-',
-    investimento: kit?.investimento || investimento || 0,
-    geracao: kit?.geracao || 0,
-    geracaoMensal: kit?.geracao || 0,
-    kwp: kit?.kwp || kwp || 0,
-    payback: kit?.payback || '-',
-    inversor: kit?.inversor || '-',
-    overload: kit?.overload || '-',
-    potenciaPlaca: kit?.potenciaPlaca || '-',
-    placas: kit?.placas || 0,
-    status: 'novo',
-    userId: uid,
-    data: new Date().toISOString(),
-    criadoEm: new Date().toISOString(),
-    utm_source: utm.source,
-    utm_campaign: utm.campaign,
-    utm_medium: utm.medium
-  });
+  const btnSalvar = document.querySelector('#formNovoLead button[type="submit"]');
+  if (btnSalvar) { btnSalvar.disabled = true; btnSalvar.textContent = 'Salvando...'; }
+
+  try {
+    await addDoc(collection(_db, 'leads'), {
+      nome, telefone, telefoneDigitos: tel, valor,
+      sistema: kit?.sistema || '-',
+      investimento: kit?.investimento || investimento || 0,
+      geracao: kit?.geracao || 0,
+      geracaoMensal: kit?.geracao || 0,
+      kwp: kit?.kwp || kwp || 0,
+      payback: kit?.payback || '-',
+      inversor: kit?.inversor || '-',
+      overload: kit?.overload || '-',
+      potenciaPlaca: kit?.potenciaPlaca || '-',
+      placas: kit?.placas || 0,
+      status: 'novo',
+      userId: uid,
+      data: agora,
+      criadoEm: agora,
+      createdAt: agora,   // [MF-AI-CHANGE] SEM isto o lead fica INVISÍVEL no kanban (orderBy createdAt) — mesmo bug dos 43 leads
+      // [MF-AI-CHANGE] Firestore REJEITA undefined. Sem UTM salvo, utm.source é undefined
+      // e o addDoc falhava ("Unsupported field value: undefined"). Coalescer p/ '' resolve.
+      utm_source: utm.source || '',
+      utm_campaign: utm.campaign || '',
+      utm_medium: utm.medium || ''
+    });
+    fecharNovoLead();
+    toast('Lead criado com sucesso', 'success');
+  } catch (err) {
+    console.error('Erro ao criar lead', err);
+    toast('Erro ao criar lead: ' + (err?.message || err), 'error');
+  } finally {
+    if (btnSalvar) { btnSalvar.disabled = false; btnSalvar.textContent = 'Salvar lead'; }
+  }
 }
 
 // ─── MOBILE KANBAN TABS ───────────────────────────────────────

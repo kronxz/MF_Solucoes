@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotação de Kit — MF Soluções</title>
+<style>
+  :root{ --navy:#003466; --navy2:#001426; --gold:#f5c518; --cyan:#0090d4; --ink:#0f172a; }
+  *{ box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',Arial,sans-serif; }
+  body{ background:#e5e9f0; color:var(--ink); padding:24px; }
+  .barra{ max-width:820px; margin:0 auto 14px; display:flex; gap:10px; }
+  .barra button{ padding:10px 18px; border:none; border-radius:8px; font-weight:700; cursor:pointer; }
+  .btn-print{ background:var(--gold); color:var(--navy2); }
+  .barra label{ margin-left:auto; display:flex; align-items:center; gap:8px; background:#fff; padding:6px 12px; border-radius:8px; font-weight:600; }
+  .barra select{ padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-weight:600; }
+  .folha{ max-width:820px; margin:0 auto; background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.12); }
+  .top{ background:linear-gradient(120deg,var(--navy),var(--navy2)); color:#fff; padding:22px 28px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .top h1{ font-size:20px; letter-spacing:.5px; }
+  .top .sub{ color:var(--gold); font-weight:700; font-size:13px; margin-top:4px; }
+  .top .emp{ text-align:right; font-size:12px; line-height:1.5; opacity:.92; }
+  .faixa{ background:var(--gold); height:5px; }
+  .corpo{ padding:24px 28px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px 24px; font-size:13px; margin-bottom:18px; }
+  .grid2 b{ color:var(--navy); }
+  h2{ color:var(--navy); font-size:14px; margin:18px 0 8px; border-bottom:2px solid var(--gold); padding-bottom:4px; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td{ text-align:left; padding:7px 8px; border-bottom:1px solid #eef2f7; }
+  th{ background:#f1f5f9; color:var(--navy); }
+  td.q{ text-align:center; white-space:nowrap; font-weight:600; }
+  td.imgcell{ width:54px; padding:5px 8px; }
+  .mimg{ width:44px; height:44px; object-fit:contain; background:#fff; border:1px solid #e5e9f0; border-radius:6px; display:block; }
+  td.imgcell.noimg{ text-align:center; color:#cbd5e1; font-size:20px; }
+  td.imgcell.noimg::before{ content:'📦'; }
+  @media print{ .mimg{ border-color:#e5e9f0; } }
+  .obs{ font-size:11.5px; color:#64748b; margin-top:14px; line-height:1.6; }
+  .rt{ margin-top:16px; font-size:12px; color:var(--navy); border-top:1px dashed #cbd5e1; padding-top:10px; }
+  @media print{ body{ background:#fff; padding:0; } .barra{ display:none; } .folha{ box-shadow:none; max-width:100%; border-radius:0; } }
+</style>
+</head>
+<body>
+  <div class="barra">
+    <button class="btn-print" onclick="window.print()">🖨️ Salvar / Imprimir PDF</button>
+    <label>🏠 Telhado:
+      <select id="telhado" onchange="render()">
+        <option value="fibrocimento">Fibrocimento</option>
+        <option value="colonial">Telha colonial (cerâmica)</option>
+        <option value="metalico">Metálico / zipado</option>
+        <option value="laje">Laje</option>
+        <option value="solo">Solo</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="folha">
+    <div class="top">
+      <div>
+        <h1>COTAÇÃO DE KIT FOTOVOLTAICO</h1>
+        <div class="sub">Lista de materiais e serviços</div>
+      </div>
+      <div class="emp">
+        <b>MF SOLUÇÕES ELÉTRICAS</b><br>
+        CNPJ 48.929.808/0001-84<br>
+        (21) 97238-1004 · Maricá/RJ
+      </div>
+    </div>
+    <div class="faixa"></div>
+    <div class="corpo">
+      <div class="grid2" id="dados"></div>
+      <h2>📦 Materiais</h2>
+      <table><thead><tr><th style="width:54px"></th><th>Item</th><th style="width:90px;text-align:center">Qtd</th></tr></thead>
+        <tbody id="materiais"></tbody>
+      </table>
+      <h2>🛠️ Serviços</h2>
+      <table><tbody id="servicos"></tbody></table>
+      <div class="obs" id="obs"></div>
+      <div class="rt">
+        <b>Responsável Técnico:</b> Marcos Felipe Machado de Almeida — Técnico em Eletrotécnica · CFT 14254334729
+      </div>
+    </div>
+  </div>
+
+<script>
+let D = {};
+try { D = JSON.parse(localStorage.getItem('cotacaoKit') || '{}'); } catch(e){ D = {}; }
+
+// ── Mini-imagens de produto (fotos reais do catálogo Belenus, salvas em img/materiais/) ──
+// Baixadas 1x do bucket público fotos-prd. Itens sem foto (string box, disjuntor,
+// eletroduto, placa de advertência) caem no placeholder 📦.
+const IMG_MAT = {
+  modulo:'modulo.jpg', inversor:'inversor.png', mc4:'mc4.jpg', stringbox:'stringbox.jpg',
+  perfil:'perfil.png', juncao:'juncao.jpg', grampo:'grampo.png',
+  fixador_fibro:'fixador_fibro.jpg', colonial:'colonial.jpg',
+  dps:'dps.jpg', haste:'haste.jpg', solo:'solo.jpg'
+};
+function slugMat(desc){
+  const d = (desc || '').toLowerCase();
+  if (/inversor/.test(d)) return 'inversor';
+  if (/módulo|modulo/.test(d)) return 'modulo';
+  if (/string ?box/.test(d)) return 'stringbox';
+  if (/mc4|conector/.test(d)) return 'mc4';
+  // cabo solar e condutor de aterramento: sem foto correta no Belenus (o "cabo" de lá é de bateria) → 📦
+  if (/prisioneiro|fibrocimento/.test(d)) return 'fixador_fibro';
+  if (/gancho|colonial/.test(d)) return 'colonial';
+  if (/trilho|metálic|metalic/.test(d)) return 'perfil'; // fallback
+  if (/perfil/.test(d)) return 'perfil';
+  if (/junção|juncao|junc/.test(d)) return 'juncao';
+  if (/grampo|garra/.test(d)) return 'grampo';      // garra → grampo (mesma família)
+  if (/dps/.test(d)) return 'dps';
+  if (/haste/.test(d)) return 'haste';
+  if (/estrutura de solo|solo|laje|triangular/.test(d)) return 'solo';
+  return null; // string box, disjuntor, eletroduto, placa de advertência → 📦
+}
+
+const N = Number(D.placas) || 0;
+const P = Number(D.potenciaPlaca) || 550;
+const KWP = Number(D.kwp) || (N*P/1000);
+const inversorKw = [5, 6.6, 7.5, 10].find(k => k >= KWP*0.85) || 10;
+
+function fixacao(tipo){
+  const comum = [
+    ['Perfil de fixação de módulo — alumínio', Math.max(2, Math.ceil(N*1.1)) + ' pç'],
+    ['Junção para perfil — alumínio', Math.max(2, Math.ceil(N/3)) + ' pç'],
+    ['Grampo intermediário (jogo 2pç) — alumínio', Math.max(1, Math.ceil((N-1)/2)) + ' jg'],
+    ['Grampo final 33mm (jogo 4pç) — alumínio', (N > 8 ? 4 : 2) + ' jg'],
+    ['Garra de aterramento (jogo 2pç) — alumínio', (N > 8 ? 4 : 2) + ' jg']
+  ];
+  const esp = {
+    fibrocimento: [['Fixador para telha de fibrocimento — parafuso prisioneiro/estojo c/ vedação', (N*2) + ' pç']],
+    colonial:     [['Suporte gancho ajustável colonial c/ prolongador (2pç) — alumínio', Math.ceil(N*1.5) + ' pç']],
+    metalico:     [['Mini trilho / grampo para telha metálica/zipada — alumínio', Math.ceil(N*1.5) + ' pç']],
+    laje:         [['Estrutura triangular para laje (base + suporte inclinado)', Math.ceil(N/2) + ' cj']],
+    solo:         [['Estrutura de solo (perfis, bases e travamentos)', 'conforme projeto']]
+  };
+  return (esp[tipo] || esp.fibrocimento).concat(comum);
+}
+
+// escape HTML — evita XSS ao interpolar dados do cliente no innerHTML
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function render(){
+  const tipo = document.getElementById('telhado').value;
+  const telhadoLabel = document.getElementById('telhado').selectedOptions[0].textContent;
+
+  document.getElementById('dados').innerHTML = `
+    <div><b>Cliente:</b> ${esc(D.cliente || '—')}</div>
+    <div><b>Concessionária:</b> ${esc(D.concessionaria || 'ENEL RJ')}</div>
+    <div><b>Telefone:</b> ${esc(D.telefone || '—')}</div>
+    <div><b>Cidade:</b> ${esc(D.endereco || 'Maricá/RJ')}</div>
+    <div><b>Sistema:</b> ${KWP.toFixed(2)} kWp · ${N} módulos de ${P} W</div>
+    <div><b>Geração estimada:</b> ${(Number(D.geracao)||0).toLocaleString('pt-BR')} kWh/mês</div>
+    <div><b>Telhado:</b> ${esc(telhadoLabel)}</div>
+    <div><b>Kit:</b> ${esc(D.kitNome || 'Fotovoltaico')}</div>`;
+
+  const materiais = [
+    ['Módulo fotovoltaico ' + P + ' Wp', N + ' pç'],
+    ['Inversor monofásico ~' + String(inversorKw).replace('.', ',') + ' kW — 2 MPPT — 220 V', '1 pç'],
+    ['Cabo solar 6 mm² 1,8 kV CC (preto e vermelho)', 'conforme percurso'],
+    ['Conector solar MC4 (macho + fêmea)', (N > 8 ? '4' : '2') + ' pares'],
+    ['String Box CC 1000 V (proteção do gerador)', '1 pç'],
+    ...fixacao(tipo),
+    ['Disjuntor termomagnético (proteção da geração)', '1 pç'],
+    ['DPS CA classe II', '1 cj'],
+    ['Haste de aterramento cobreada 3,0 m + conector', '1 pç'],
+    ['Condutor de aterramento / equipotencialização 6 mm²', 'conforme projeto'],
+    ['Eletroduto, eletrocalha e acessórios (percurso CC e CA)', 'conforme projeto'],
+    ['Placas de advertência 13×13 cm (padrão + poste) — exigência ENEL', '2 pç']
+  ];
+  document.getElementById('materiais').innerHTML = materiais
+    .map(([d, q]) => {
+      const s = slugMat(d);
+      const f = s && IMG_MAT[s] ? `img/materiais/${IMG_MAT[s]}` : '';
+      const img = f
+        ? `<td class="imgcell"><img class="mimg" src="${f}" alt="" loading="lazy" onerror="this.parentElement.classList.add('noimg');this.remove()"></td>`
+        : `<td class="imgcell noimg"></td>`;
+      return `<tr>${img}<td>${d}</td><td class="q">${q}</td></tr>`;
+    }).join('');
+
+  const servicos = [
+    'Projeto elétrico executivo — diagrama unifilar, memoriais e lista de materiais',
+    'TRT do responsável técnico e protocolo do pedido de acesso na ENEL',
+    'Instalação completa — estrutura, módulos, cabeamento CC/CA, quadro e aterramento',
+    'Comissionamento — testes, configuração do inversor e do monitoramento',
+    'Acompanhamento da vistoria da ENEL até a troca do medidor'
+  ];
+  document.getElementById('servicos').innerHTML = servicos
+    .map(s => `<tr><td>✅ ${s}</td></tr>`).join('');
+
+  document.getElementById('obs').innerHTML =
+    'Estrutura de fixação especificada para <b>' + telhadoLabel + '</b>. ' +
+    'Quantidades de fixação, cabo, eletroduto e acessórios são <b>estimativa</b> — confirmadas no levantamento técnico em campo, sem alteração do valor combinado. ' +
+    'Os equipamentos entregues serão exatamente os do projeto aprovado pela ENEL — qualquer substituição de marca/modelo exige reemissão do projeto.';
+
+  document.title = D.cliente ? ('Cotação de Kit — ' + D.cliente) : 'Cotação de Kit — MF Soluções';
+}
+
+// telhado default por concessionária/região: fibrocimento é o mais comum em Maricá
+render();
+</script>
+</body>
+</html>
