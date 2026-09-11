@@ -101,9 +101,13 @@ function criarCardHtml(lead) {
     ? '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#1e3a5f;color:#60a5fa;border:1px solid #2563eb">🔵 LANDING PAGE</span>'
     : '<span style="display:inline-block;margin-bottom:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#052e16;color:#4ade80;border:1px solid #16a34a">🟢 CALCULADORA</span>';
 
+  const isEletrica = String(lead.segmento || '').toLowerCase() === 'eletrica';
+  const segBadge = isEletrica
+    ? '<span style="display:inline-block;margin:0 0 4px 4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#3a2a05;color:#fbbf24;border:1px solid #d97706">⚡ ELÉTRICA</span>'
+    : '';
   return `
 <div class="card" draggable="true" data-lead-id="${lead.id}">
-  ${origemBadge}
+  ${origemBadge}${segBadge}
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>
@@ -124,6 +128,7 @@ function criarCardHtml(lead) {
     <button type="button" class="btn-card btn-detalhes" data-detalhes="${lead.id}">📊 Detalhes</button>
     <button type="button" class="btn-card btn-proposta" data-proposta="${lead.id}">📄 Proposta</button>
     <button type="button" class="btn-card btn-fechar-venda" data-fechar="${lead.id}">💰 Fechar Venda</button>
+    <button type="button" class="btn-card btn-segmento" data-segmento="${lead.id}">${isEletrica ? '☀️ p/ Solar' : '⚡ p/ Elétrica'}</button>
   </div>
 </div>`;
 }
@@ -199,7 +204,7 @@ export function iniciarKanban(db, onDetalhes) {
 
   // Delegação de eventos: todos os botões de card
   board.addEventListener('click', e => {
-    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp]');
+    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp],[data-segmento]');
     if (!btn) return;
 
     if (btn.dataset.mover) moverLead(btn.dataset.mover);
@@ -210,6 +215,7 @@ export function iniciarKanban(db, onDetalhes) {
     else if (btn.dataset.proposta) abrirProposta(btn.dataset.proposta);
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);
     else if (btn.dataset.whatsapp) whatsappLead(btn.dataset.whatsapp);
+    else if (btn.dataset.segmento) alternarSegmento(btn.dataset.segmento);
   });
 
   COLUNAS.forEach(col => {
@@ -310,6 +316,19 @@ async function moverParaColuna(id, novoStatus) {
     lastAction: new Date().toISOString()
   });
   toast(`Lead → ${novoStatus}`, 'success');
+}
+
+// Marca/alterna o segmento do lead (☀️ Solar ⇄ ⚡ Elétrica) — grava o campo.
+async function alternarSegmento(id) {
+  const lead = _leads.find(l => l.id === id);
+  if (!lead) return;
+  const atual = String(lead.segmento || '').toLowerCase() === 'eletrica' ? 'eletrica' : 'solar';
+  const novo = atual === 'eletrica' ? 'solar' : 'eletrica';
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  await updateDoc(doc(leadDb, col, id), { segmento: novo, lastAction: new Date().toISOString() });
+  lead.segmento = novo;
+  toast('Segmento → ' + (novo === 'eletrica' ? '⚡ Elétrica' : '☀️ Solar'), 'success');
+  renderizarKanban(_leads);
 }
 
 async function moverLead(id) {
