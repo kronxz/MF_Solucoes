@@ -404,3 +404,10 @@ body {
 /* ── Central de Dados — seções (F2) ── */
 .central-secao { margin-top: 16px; }
 .central-titulo { font-size: 15px; color:#e5edf7; margin: 0 0 8px; display:flex; align-items:center; gap:8px; }
+
+/* ── Visitas PRO (KPIs + gráficos) — MF 2026-09-11 ── */
+.vis-charts { display:grid; grid-template-columns:1.5fr 1fr; gap:14px; margin-top:14px; }
+.vis-chart-box { padding:14px 16px; }
+.vis-canvas-wrap { position:relative; height:200px; }
+.vis-canvas-wrap canvas { max-height:200px; }
+@media (max-width:768px){ .vis-charts{ grid-template-columns:1fr; } }

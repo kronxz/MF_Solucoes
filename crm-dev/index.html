@@ -255,6 +255,22 @@
     <section id="visitasPage" class="page" aria-label="Visitas">
       <h1>👁️ Visitas</h1>
       <p id="visitasMeta" class="crm-page-meta">Carregando sessões...</p>
+      <div id="visitasKpis" class="dashboard-metrics" style="grid-template-columns:repeat(4,1fr)"></div>
+      <div class="vis-charts">
+        <div class="glass-card vis-chart-box">
+          <h3 class="central-titulo">📈 Visitas por dia (14 dias)</h3>
+          <div class="vis-canvas-wrap"><canvas id="visChartDia"></canvas></div>
+        </div>
+        <div class="glass-card vis-chart-box">
+          <h3 class="central-titulo">🎯 Por origem</h3>
+          <div class="vis-canvas-wrap"><canvas id="visChartOrigem"></canvas></div>
+        </div>
+      </div>
+      <div class="glass-card vis-chart-box" style="margin-top:14px">
+        <h3 class="central-titulo">🕐 Visitas por hora do dia</h3>
+        <div class="vis-canvas-wrap" style="height:140px"><canvas id="visChartHora"></canvas></div>
+      </div>
+      <h3 class="central-titulo" style="margin-top:16px">🧾 Sessões recentes</h3>
       <div id="visitasConteudo" class="visitas-list"></div>
     </section>
 
