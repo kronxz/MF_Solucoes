@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRM — MF Soluções</title>
+  <link rel="icon" type="image/png" href="./img/mf-logo.png">
+  <link rel="apple-touch-icon" href="./img/mf-logo.png">
   <meta name="description" content="Painel CRM interno da MF Soluções Elétricas para gestão de leads e pipeline de vendas de energia solar.">
 
   <!-- Google Fonts -->
@@ -449,6 +451,39 @@
   </div>
 
   <!-- ════════════════════════════════
+       MODAL — NOVO LEAD (manual) — substitui prompt() que nao roda no Electron
+  ════════════════════════════════ -->
+  <div id="modalNovoLead" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Novo lead" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">➕ Novo Lead</h2>
+        <button id="btn-cancelar-novo-lead" type="button" class="btn-fechar" aria-label="Fechar">✕</button>
+      </div>
+      <form id="formNovoLead" autocomplete="off" style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Nome do cliente *
+          <input id="nl-nome" type="text" class="input-busca" required placeholder="Ex.: João da Silva" style="margin:0;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Telefone / WhatsApp
+          <input id="nl-telefone" type="tel" class="input-busca" placeholder="(21) 99999-9999" style="margin:0;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Conta de luz (R$)
+          <input id="nl-valor" type="text" inputmode="numeric" class="input-busca" placeholder="Ex.: 450" style="margin:0;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Valor do sistema (R$) — opcional
+          <input id="nl-investimento" type="text" inputmode="numeric" class="input-busca" placeholder="Opcional" style="margin:0;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Potência (kWp) — opcional
+          <input id="nl-kwp" type="text" inputmode="decimal" class="input-busca" placeholder="Opcional" style="margin:0;">
+        </label>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+          <button type="button" id="btn-cancelar-novo-lead-2" onclick="document.getElementById('modalNovoLead').classList.remove('ativo');document.getElementById('modalNovoLead').setAttribute('aria-hidden','true');" style="padding:10px 18px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-weight:600;cursor:pointer;">Cancelar</button>
+          <button type="submit" style="padding:10px 18px;border:none;background:#f59e0b;color:#1a1a2e;border-radius:8px;font-weight:700;cursor:pointer;">Salvar lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
        MODAL — DETALHES DO LEAD
   ════════════════════════════════ -->
   <div id="modalDetalhes" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Detalhes do lead" aria-hidden="true">
@@ -483,6 +518,7 @@
             <textarea id="detalhe-observacoes" class="notas-internas" rows="4" placeholder="Anotações sobre este lead..."></textarea>
             <span id="detalhe-obs-status" class="notas-status"></span>
             <button type="button" id="btnPropostaModal" class="btn-card btn-proposta" style="margin-top:12px;width:100%">📄 Abrir Proposta PDF</button>
+            <button type="button" id="btnCotacaoKitModal" class="btn-card" style="margin-top:8px;width:100%;background:#0090d4;color:#fff;border:none">📋 Cotação de Kit (lista de materiais)</button>
           </div>
         </div>
 
@@ -507,7 +543,7 @@
   </div>
 
   <!-- App Entry Point -->
-  <script type="module" src="./js/app.js?v=20260710b"></script>
+  <script type="module" src="./js/app.js?v=20260731"></script>
 
 </body>
 </html>
