@@ -146,13 +146,48 @@ export function atualizarAnalyticsMini(eventos) {
 
 }
 
+// ─── SEGMENTO (Solar × Elétrica) — filtro do dashboard ─────────
+let _dashTodos = [], _dashEventos = [];
+let _segmento = 'todos';
+try { _segmento = localStorage.getItem('mf_segmento') || 'todos'; } catch (_) {}
+
+// Classificação de LEITURA (não grava): usa lead.segmento se existir, senão infere.
+export function segmentoDe(lead) {
+  const seg = String((lead && lead.segmento) || '').toLowerCase();
+  if (seg === 'solar' || seg === 'eletrica') return seg;
+  if (lead && lead.origemSistema === 'landing') return 'solar'; // landing = 100% solar
+  if (lead && (lead.kwp || lead.kWp || lead.potencia || lead.geracao || lead.kitNome || lead.kit)) return 'solar';
+  const txt = String((lead && (lead.observacao || lead.servico || lead.interesse || lead.mensagem)) || '').toLowerCase();
+  if (/disjuntor|sem luz|sem energia|emerg|reforma|manuten|el[eé]tric|tomada|curto|padr[aã]o de entrada|quadro/.test(txt)) return 'eletrica';
+  return 'solar'; // default histórico (CRM nasceu solar)
+}
+
+function _pintarBotoes() {
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('ativo', b.dataset.seg === _segmento));
+}
+
+function _renderDash() {
+  const f = _segmento === 'todos' ? _dashTodos : _dashTodos.filter(l => segmentoDe(l) === _segmento);
+  atualizarMetricas(f);
+  renderFunilConversao(f);
+  atualizarOrigensLeads(f);
+  atualizarTrafico(_dashTodos, _dashEventos);   // tráfego = visitas da landing → fica global
+  atualizarAnalyticsMini(_dashEventos);
+}
+
+export function setSegmento(seg) {
+  _segmento = seg;
+  try { localStorage.setItem('mf_segmento', seg); } catch (_) {}
+  _renderDash();
+  _pintarBotoes();
+}
+if (typeof window !== 'undefined') window.mfSetSegmento = setSegmento;
+
 export function atualizarDashboardCompleto(leads, eventos, landingLeads = []) {
-  const todos = [...(leads || []), ...(landingLeads || [])];
-  atualizarMetricas(todos);
-  renderFunilConversao(todos);
-  atualizarTrafico(todos, eventos);
-  atualizarAnalyticsMini(eventos);
-  atualizarOrigensLeads(todos);
+  _dashTodos = [...(leads || []), ...(landingLeads || [])];
+  _dashEventos = eventos;
+  _renderDash();
+  _pintarBotoes();
 }
 
 /** Top origens e campanhas (leads ativos) */

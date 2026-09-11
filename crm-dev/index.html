@@ -170,6 +170,13 @@
       </div>
 
       <!-- Metric Cards -->
+      <!-- Filtro de Segmento (Empresa / Solar / Elétrica) -->
+      <div class="seg-filtro" role="tablist" aria-label="Segmento">
+        <button class="seg-btn ativo" data-seg="todos" onclick="mfSetSegmento('todos')">🏢 Empresa</button>
+        <button class="seg-btn" data-seg="solar" onclick="mfSetSegmento('solar')">☀️ Solar</button>
+        <button class="seg-btn" data-seg="eletrica" onclick="mfSetSegmento('eletrica')">⚡ Elétrica</button>
+      </div>
+
       <div class="dashboard-metrics" id="dashboardMetrics">
         <div class="glass-card metric-card">
           <b>💰 Em Negociação</b>
