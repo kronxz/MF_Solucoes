@@ -151,6 +151,25 @@ export async function excluirMovimentacao(leadId, movId) {
 
 // ─── RENDERIZAÇÃO DA PÁGINA ─────────────────────────────────────
 
+// Resumo financeiro escopado pelos leads passados (segment-aware p/ a Central).
+export function calcularResumoFinanceiro(leads) {
+  const ids = new Set((leads || []).map(l => l.id));
+  let totalContratos = 0, receitasEntradas = 0, receitasAvulsas = 0, totalDespesas = 0;
+  Object.values(_financeiroMap).forEach(fin => {
+    if (!ids.has(fin.leadId)) return;
+    const lead = (leads || []).find(l => l.id === fin.leadId);
+    if (!lead || lead.excluido || lead.deletado) return;
+    totalContratos += fin.valorTotal || 0;
+    receitasEntradas += fin.entrada || 0;
+    (fin.movimentacoes || []).forEach(m => {
+      if (m.tipo === 'receita') receitasAvulsas += m.valor || 0;
+      if (m.tipo === 'despesa') totalDespesas += m.valor || 0;
+    });
+  });
+  const recebido = receitasEntradas + receitasAvulsas;
+  return { totalContratos, recebido, despesas: totalDespesas, aReceber: Math.max(0, totalContratos - recebido) };
+}
+
 export function renderizarFinanceiroPage() {
   const container = document.getElementById('financeiroPage');
   if (!container) return;

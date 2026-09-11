@@ -7,6 +7,7 @@ import {
 import { formatBRL, parseDataFirestore } from './crm-utils.js';
 import { COLUNAS, TITULOS, normalizarStatus } from './crm-kanban.js';
 import { renderizarStatsKits, renderizarGraficoLeads } from './crm-stats.js';
+import { calcularResumoFinanceiro } from './crm-financeiro.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
 export function atualizarMetricas(leads) {
@@ -150,7 +151,29 @@ export function atualizarAnalyticsMini(eventos) {
 // ─── SEGMENTO (Solar × Elétrica) — filtro do dashboard ─────────
 let _dashTodos = [], _dashEventos = [];
 let _segmento = 'todos';
+let _periodo = 'tudo';
 try { _segmento = localStorage.getItem('mf_segmento') || 'todos'; } catch (_) {}
+try { _periodo = localStorage.getItem('mf_periodo') || 'tudo'; } catch (_) {}
+
+function _dentroPeriodo(lead) {
+  if (_periodo === 'tudo') return true;
+  const d = parseDataFirestore(lead.data || lead.createdAt || lead.criadoEm);
+  if (!d) return true; // sem data → não esconde
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  if (_periodo === 'hoje') return d >= hoje;
+  if (_periodo === 'semana') { const i = new Date(hoje); i.setDate(hoje.getDate() - hoje.getDay()); return d >= i; }
+  if (_periodo === 'mes') return d >= new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  if (_periodo === 'ano') return d >= new Date(hoje.getFullYear(), 0, 1);
+  return true;
+}
+
+function renderResumoFinanceiro(leads) {
+  const el = document.getElementById('resumoFinanceiroDash');
+  if (!el) return;
+  const r = calcularResumoFinanceiro(leads);
+  const card = (t, v, cor) => `<div class="glass-card metric-card"><b>${t}</b><span class="metric-value" style="font-size:18px${cor ? ';color:' + cor : ''}">${formatBRL(v)}</span></div>`;
+  el.innerHTML = card('📝 Contratos', r.totalContratos) + card('📈 Recebido', r.recebido, '#22c55e') + card('💸 Despesas', r.despesas, '#f59e0b') + card('⏳ A Receber', r.aReceber, '#60a5fa');
+}
 
 // Classificação de LEITURA (não grava): usa lead.segmento se existir, senão infere.
 export function segmentoDe(lead) {
@@ -165,16 +188,19 @@ export function segmentoDe(lead) {
 
 function _pintarBotoes() {
   document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('ativo', b.dataset.seg === _segmento));
+  document.querySelectorAll('.per-btn').forEach(b => b.classList.toggle('ativo', b.dataset.per === _periodo));
 }
 
 function _renderDash() {
-  const f = _segmento === 'todos' ? _dashTodos : _dashTodos.filter(l => segmentoDe(l) === _segmento);
+  const base = _dashTodos.filter(_dentroPeriodo);
+  const f = _segmento === 'todos' ? base : base.filter(l => segmentoDe(l) === _segmento);
   atualizarMetricas(f);
   renderFunilConversao(f);
-  renderizarStatsKits(f, 'statsKitsDash');       // Performance por Kit na Central (segment-aware)
-  renderizarGraficoLeads(f, 'graficoLeadsDash'); // Leads por dia na Central (segment-aware)
+  renderizarStatsKits(f, 'statsKitsDash');       // Performance por Kit (segment/período-aware)
+  renderizarGraficoLeads(f, 'graficoLeadsDash'); // Leads por dia
+  renderResumoFinanceiro(f);                     // Financeiro na Central
   atualizarOrigensLeads(f);
-  atualizarTrafico(_dashTodos, _dashEventos);   // tráfego = visitas da landing → fica global
+  atualizarTrafico(_dashTodos, _dashEventos);   // tráfego = visitas da landing → global
   atualizarAnalyticsMini(_dashEventos);
 }
 
@@ -185,6 +211,14 @@ export function setSegmento(seg) {
   _pintarBotoes();
 }
 if (typeof window !== 'undefined') window.mfSetSegmento = setSegmento;
+
+export function setPeriodo(per) {
+  _periodo = per;
+  try { localStorage.setItem('mf_periodo', per); } catch (_) {}
+  _renderDash();
+  _pintarBotoes();
+}
+if (typeof window !== 'undefined') window.mfSetPeriodo = setPeriodo;
 
 export function atualizarDashboardCompleto(leads, eventos, landingLeads = []) {
   _dashTodos = [...(leads || []), ...(landingLeads || [])];

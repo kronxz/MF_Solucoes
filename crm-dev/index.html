@@ -74,10 +74,10 @@
       <button id="btn-notificacoes" class="sidebar-btn" data-page="notificacoesPage">
         <span class="btn-icon">🔔</span> Notificações
       </button>
-      <button id="btn-stats" class="sidebar-btn" data-page="statsPage">
+      <button id="btn-stats" class="sidebar-btn" data-page="statsPage" style="display:none">
         <span class="btn-icon">🏆</span> Estatísticas
       </button>
-      <button id="btn-analytics" class="sidebar-btn" data-page="analyticsPage">
+      <button id="btn-analytics" class="sidebar-btn" data-page="analyticsPage" style="display:none">
         <span class="btn-icon">📈</span> Analytics
       </button>
       <button id="btn-qrcodes" class="sidebar-btn" data-page="qrcodesPage">
@@ -177,6 +177,15 @@
         <button class="seg-btn" data-seg="eletrica" onclick="mfSetSegmento('eletrica')">⚡ Elétrica</button>
       </div>
 
+      <!-- Filtro de Período -->
+      <div class="seg-filtro" role="tablist" aria-label="Período">
+        <button class="seg-btn per-btn ativo" data-per="tudo" onclick="mfSetPeriodo('tudo')">📅 Tudo</button>
+        <button class="seg-btn per-btn" data-per="hoje" onclick="mfSetPeriodo('hoje')">Hoje</button>
+        <button class="seg-btn per-btn" data-per="semana" onclick="mfSetPeriodo('semana')">Semana</button>
+        <button class="seg-btn per-btn" data-per="mes" onclick="mfSetPeriodo('mes')">Mês</button>
+        <button class="seg-btn per-btn" data-per="ano" onclick="mfSetPeriodo('ano')">Ano</button>
+      </div>
+
       <div class="dashboard-metrics" id="dashboardMetrics">
         <div class="glass-card metric-card">
           <b>💰 Em Negociação</b>
@@ -194,6 +203,12 @@
           <b>📈 Conversão</b>
           <span id="conversao" class="metric-value">0%</span>
         </div>
+      </div>
+
+      <!-- Central: Resumo Financeiro (segment/período-aware) -->
+      <div class="central-secao">
+        <h3 class="central-titulo">💰 Financeiro</h3>
+        <div id="resumoFinanceiroDash" class="dashboard-metrics" style="grid-template-columns:repeat(4,1fr)"></div>
       </div>
 
       <!-- Funil de Conversão (contagem por estágio) -->
