@@ -6,6 +6,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { formatBRL, parseDataFirestore } from './crm-utils.js';
 import { COLUNAS, TITULOS, normalizarStatus } from './crm-kanban.js';
+import { renderizarStatsKits } from './crm-stats.js';
 
 // ─── MÉTRICAS DO KANBAN ────────────────────────────────────────
 export function atualizarMetricas(leads) {
@@ -170,6 +171,7 @@ function _renderDash() {
   const f = _segmento === 'todos' ? _dashTodos : _dashTodos.filter(l => segmentoDe(l) === _segmento);
   atualizarMetricas(f);
   renderFunilConversao(f);
+  renderizarStatsKits(f, 'statsKitsDash');       // Performance por Kit na Central (segment-aware)
   atualizarOrigensLeads(f);
   atualizarTrafico(_dashTodos, _dashEventos);   // tráfego = visitas da landing → fica global
   atualizarAnalyticsMini(_dashEventos);

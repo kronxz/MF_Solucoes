@@ -4,8 +4,8 @@
 let _chartInstance = null;
 
 // ─── KIT STATS TABLE ─────────────────────────────────────────
-export function renderizarStatsKits(leads) {
-  const el = document.getElementById('statsKits');
+export function renderizarStatsKits(leads, targetId = 'statsKits') {
+  const el = document.getElementById(targetId);
   if (!el) return;
 
   const est = JSON.parse(localStorage.getItem('estatisticas') || '{}');
