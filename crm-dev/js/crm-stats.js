@@ -1,7 +1,7 @@
 // [MF-AI-CHANGE] crm-stats.js — Kit stats table + Chart.js line graph — 2026-05-22
 // Handles: kit performance table (Essencial/Recomendado/Premium), 14-day lead trend chart
 
-let _chartInstance = null;
+const _chartInstances = {};
 
 // ─── KIT STATS TABLE ─────────────────────────────────────────
 export function renderizarStatsKits(leads, targetId = 'statsKits') {
@@ -63,8 +63,8 @@ export function renderizarStatsKits(leads, targetId = 'statsKits') {
 }
 
 // ─── CHART.JS LEADS POR DIA ───────────────────────────────────
-export function renderizarGraficoLeads(leads) {
-  const canvas = document.getElementById('graficoLeads');
+export function renderizarGraficoLeads(leads, canvasId = 'graficoLeads') {
+  const canvas = document.getElementById(canvasId);
   if (!canvas || typeof Chart === 'undefined') return;
 
   // Gera array dos últimos 14 dias
@@ -94,19 +94,19 @@ export function renderizarGraficoLeads(leads) {
     return counts[key] || 0;
   });
 
-  if (_chartInstance) {
+  if (_chartInstances[canvasId]) {
     try {
-      _chartInstance.data.labels = labels;
-      _chartInstance.data.datasets[0].data = data;
-      _chartInstance.update();
+      _chartInstances[canvasId].data.labels = labels;
+      _chartInstances[canvasId].data.datasets[0].data = data;
+      _chartInstances[canvasId].update();
       return;
     } catch (e) {
-      _chartInstance.destroy();
-      _chartInstance = null;
+      _chartInstances[canvasId].destroy();
+      _chartInstances[canvasId] = null;
     }
   }
 
-  _chartInstance = new Chart(canvas, {
+  _chartInstances[canvasId] = new Chart(canvas, {
     type: 'line',
     data: {
       labels,
