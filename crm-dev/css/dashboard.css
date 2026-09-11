@@ -460,3 +460,48 @@ body {
 
 /* títulos de seção com respiro neon */
 .central-titulo { text-shadow:0 0 12px rgba(90,200,255,.25); }
+
+/* ═══ CENTRAL RÁPIDA renovada — motion/neon (2026-09-11) ═══ */
+@keyframes mfSlide { to { background-position:200% 0; } }
+#dashboardPage .painel-rapido {
+  position:relative; overflow:hidden;
+  background:linear-gradient(160deg, rgba(12,52,92,.5), rgba(4,18,40,.78));
+  border:1px solid rgba(90,200,255,.22);
+  box-shadow:0 16px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+}
+#dashboardPage .painel-rapido::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, #0090D4, #22c55e, #0090D4, transparent);
+  background-size:200% 100%; animation:mfSlide 4s linear infinite;
+}
+#dashboardPage .painel-titulo { text-shadow:0 0 16px rgba(34,197,94,.4); }
+
+#dashboardPage .acao-link {
+  position:relative; overflow:hidden;
+  background:linear-gradient(160deg, rgba(15,52,92,.42), rgba(6,26,52,.6));
+  border:1px solid rgba(90,200,255,.2);
+  transition:transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s, border-color .25s;
+}
+#dashboardPage .acao-link::after {
+  content:''; position:absolute; top:0; left:-40%; width:40%; height:100%;
+  background:linear-gradient(90deg, transparent, rgba(120,210,255,.14), transparent);
+  transform:skewX(-18deg); transition:left .6s ease; pointer-events:none;
+}
+#dashboardPage .acao-link:hover {
+  transform:translateY(-4px) scale(1.02);
+  border-color:rgba(90,200,255,.7);
+  box-shadow:0 12px 28px rgba(0,0,0,.5), 0 0 24px rgba(0,144,212,.42);
+}
+#dashboardPage .acao-link:hover::after { left:140%; }
+
+#dashboardPage .info-card {
+  background:linear-gradient(160deg, rgba(15,52,92,.35), rgba(6,24,48,.58));
+  border:1px solid rgba(90,200,255,.18);
+  border-left:3px solid rgba(0,144,212,.6);
+  transition:transform .25s, box-shadow .25s, border-color .25s;
+}
+#dashboardPage .info-card:hover {
+  transform:translateY(-3px);
+  border-left-color:#22c55e;
+  box-shadow:0 12px 28px rgba(0,0,0,.4), 0 0 20px rgba(0,144,212,.22);
+}
