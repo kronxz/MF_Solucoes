@@ -204,6 +204,14 @@ export function iniciarKanban(db, onDetalhes) {
 
   // Delegação de eventos: todos os botões de card
   board.addEventListener('click', e => {
+    // MOBILE: toque no nome abre/fecha as opções do lead (só < 768px; PC intacto)
+    const nome = e.target.closest('.card-nome');
+    if (nome && window.matchMedia('(max-width: 768px)').matches) {
+      const card = nome.closest('.card');
+      if (card) card.classList.toggle('expanded');
+      return;
+    }
+
     const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp],[data-segmento]');
     if (!btn) return;
 

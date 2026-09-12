@@ -18,6 +18,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 import { calcularSlotsLivres, proximosSlots, MF_CONFIG } from './slotEngine.esm.js';
+import { COLUNAS, normalizarStatus } from './crm-kanban.js';
+import { toast } from './crm-utils.js';
 
 const AGENDAMENTOS_LIMIT = 500;
 const OFFSET_BR = '-03:00';
@@ -145,6 +147,35 @@ export async function horariosLivresNaJanela({ tipo = 'visita_tecnica', zona = n
   return calcularSlotsLivres({ config: _config || MF_CONFIG, compromissos: compromissosParaMotor(), tipo, zona, deMs, ateMs, limite });
 }
 
+// ── Regra F2: agendar VISITA sobe o lead ligado pra coluna "Visita" ───
+// (nunca regride — se o lead já está em Proposta/Fechado/etc., não puxa pra trás)
+async function subirLeadParaVisita(db, leadRef) {
+  if (!db || !leadRef) return false;
+  const lead = _leads.find(l => l.id === leadRef);
+  if (!lead) return false;                       // sem lead resolvível → não mexe
+  const col = lead.origemSistema === 'landing' ? 'lp_leads' : 'leads';
+  const idxAtual = COLUNAS.indexOf(normalizarStatus(lead.status));
+  const idxVisita = COLUNAS.indexOf('visita');
+  if (idxAtual !== -1 && idxAtual >= idxVisita) return false;  // já está na Visita ou além
+  const agora = new Date().toISOString();
+  const historico = Array.isArray(lead.historico) ? lead.historico.slice() : [];
+  historico.push({ acao: 'Movido para visita (agendamento)', data: agora });
+  try {
+    await updateDoc(doc(db, col, leadRef), {
+      status: 'visita',
+      historico,
+      ultima_acao_nome: 'Visita agendada',
+      lastAction: agora,
+    });
+    lead.status = 'visita';
+    toast('Lead → 📅 Visita (agendado)', 'success');
+    return true;
+  } catch (err) {
+    console.error('[CRM-Agenda] subirLeadParaVisita erro:', err);
+    return false;
+  }
+}
+
 // ── 4. GRAVAÇÃO (esquema V1) ──────────────────────────────────────────
 export async function criarAgendamentoManual(db, dados) {
   const agora = new Date().toISOString();
@@ -167,6 +198,10 @@ export async function criarAgendamentoManual(db, dados) {
     historico: [{ em: agora, de: null, para: status, por: 'marcos' }],
   };
   const ref = await addDoc(collection(db, 'agendamentos'), doc0);
+  // F2: visita técnica ligada a um lead → sobe o lead pra coluna Visita (não regride)
+  if (doc0.tipo === 'visita_tecnica' && dados.leadRef) {
+    await subirLeadParaVisita(db, dados.leadRef);
+  }
   return ref.id;
 }
 

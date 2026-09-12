@@ -122,3 +122,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Busca da aba Conversas (objeções + mensagens) — 2026-09-12 */
+.funil-busca { max-width: 560px; margin-top: 12px; }
+.funil-busca-vazio { color: #94a3b8; font-size: 13px; margin: 8px 0 0; }
+.funil-msg-card[hidden], .funil-categoria[hidden] { display: none !important; }

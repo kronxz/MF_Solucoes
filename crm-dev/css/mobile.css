@@ -295,3 +295,40 @@ html, body {
   .seg-filtro { gap: 6px; }
   #dashboardPage .painel-rapido { padding: 16px; }
 }
+
+/* Kanban mobile compacto — vários leads por tela; toque no nome abre as opções (2026-09-11) */
+@media (max-width: 768px) {
+  /* Card enxuto por padrão → cabem vários na tela do celular */
+  .board .card { padding: 9px 12px; margin-bottom: 8px; }
+
+  .board .card .card-nome {
+    font-size: 15px;
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px;
+  }
+  /* Seta indicando que o nome é tocável */
+  .board .card .card-nome::after {
+    content: "\25B8"; /* ▸ */
+    position: absolute;
+    right: 2px;
+    top: 0;
+    color: #22c55e;
+    transition: transform .2s ease;
+  }
+  .board .card.expanded .card-nome::after { transform: rotate(90deg); }
+
+  /* Blocos pesados escondidos até tocar no nome */
+  .board .card .crm-card-intel,
+  .board .card .card-utm,
+  .board .card .card-actions,
+  .board .card > small,
+  .board .card > br { display: none; }
+
+  /* Ao tocar no nome: mostra tudo (mesmas opções de sempre) */
+  .board .card.expanded .crm-card-intel { display: flex; }
+  .board .card.expanded .card-utm { display: block; }
+  .board .card.expanded .card-actions { display: grid; }
+  .board .card.expanded > small { display: inline-block; }
+  .board .card.expanded > br { display: inline; }
+}
