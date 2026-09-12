@@ -351,6 +351,9 @@
         <button class="kanban-btn todos-btn" data-coluna="todos" role="tab" aria-selected="false">📋 Todos</button>
       </div>
 
+      <!-- Faixa de emergências elétricas (preenchida por crm-kanban.js) -->
+      <div id="kanbanEmergencias" hidden></div>
+
       <!-- Kanban Board -->
       <div class="board" id="kanbanBoard">
         <div class="column" id="novo" data-status="novo" ondragover="event.preventDefault()" role="tabpanel">
@@ -552,6 +555,7 @@
         <button class="modal-tab active" data-aba="abaLead" role="tab" aria-selected="true">📋 Lead</button>
         <button class="modal-tab" data-aba="abaInteligencia" role="tab" aria-selected="false">🧠 Inteligência</button>
         <button class="modal-tab" data-aba="abaFinanciamento" role="tab" aria-selected="false">💳 Financiamento</button>
+        <button class="modal-tab" data-aba="abaEletrica" role="tab" aria-selected="false">⚡ Elétrica</button>
       </div>
 
       <!-- Tab Content -->
@@ -588,6 +592,13 @@
         <div id="abaFinanciamento" class="aba-panel" role="tabpanel" style="display:none">
           <div class="aba-scroll">
             <div id="detalhe-financiamento"></div>
+          </div>
+        </div>
+
+        <!-- ABA ELÉTRICA -->
+        <div id="abaEletrica" class="aba-panel" role="tabpanel" style="display:none">
+          <div class="aba-scroll">
+            <div id="detalhe-eletrica"></div>
           </div>
         </div>
 

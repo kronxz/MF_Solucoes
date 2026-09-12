@@ -158,3 +158,32 @@
 .lixeira-info b { font-size: 14px; margin-bottom: 4px; }
 .lixeira-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .lixeira-vazia { padding: 30px; text-align: center; color: #6b7280; font-size: 14px; }
+
+/* ⚡ Aba Elétrica do lead (E1) — 2026-09-12 */
+.el-emergencia-aviso {
+  background: #450a0a; color: #fecaca; border: 1px solid #ef4444;
+  padding: 10px 12px; border-radius: 10px; font-weight: 800; margin-bottom: 12px;
+  letter-spacing: .3px;
+}
+.el-titulo { font-size: 15px; margin: 12px 0 8px; }
+.el-form { display: flex; flex-direction: column; gap: 10px; }
+.el-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #94a3b8; }
+.el-form select, .el-form input, .el-form textarea {
+  padding: 10px; border-radius: 8px; border: 1px solid var(--borda-sutil);
+  background: #1f2937; color: #e2e8f0; font-family: var(--font-crm); font-size: 13px; box-sizing: border-box;
+}
+.el-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.el-historico { display: flex; flex-direction: column; gap: 8px; }
+.el-demanda {
+  background: rgba(30,41,59,.6); border: 1px solid var(--borda-sutil);
+  border-left: 3px solid #64748b; border-radius: 10px; padding: 10px 12px;
+}
+.el-demanda--ok { opacity: .6; border-left-color: #22c55e; }
+.el-demanda-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.el-urg { font-size: 11px; font-weight: 700; }
+.el-ok { font-size: 11px; color: #4ade80; }
+.el-demanda-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.el-demanda-obs { font-size: 12px; margin-top: 6px; color: #cbd5e1; }
+.el-demanda-foto { font-size: 12px; margin-top: 4px; }
+.el-resolver { margin-top: 8px; background: #14532d; color: #dcfce7; border: 1px solid #22c55e; }
+@media (max-width: 768px) { .el-form-row { grid-template-columns: 1fr; } }

@@ -9,8 +9,11 @@ import { TIMELINE_LIMIT } from './crm-config.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { app } from '../firebase/config.js';
 import { abrirProposta } from './crm-proposal.js';
+import { abrirCotacaoKit } from './crm-cotacao-kit.js';
+import { calcularScore } from './scoreEngine.esm.js';
 import { toast, escHtml } from './crm-utils.js';
 import { renderHtmlFinanciamento, renderHtmlKitResumo } from './crm-finance.js';
+import { iniciarEletrica, renderAbaEletrica } from './crm-eletrica.js';
 import {
   renderTimelineMiniHtml,
   formatTempoRelativo,
@@ -29,6 +32,9 @@ let _debounceObs = null;
 export function iniciarDetails(db) {
   _db = db;
 
+  // Módulo ⚡ Elétrica (aba do modal) — lê o lead atual pela lista local
+  iniciarEletrica(db, id => _leads.find(l => l.id === id));
+
   // Fechar modal
   document.getElementById('btnFecharModal')?.addEventListener('click', fecharDetalhes);
   document.getElementById('modalDetalhes')?.addEventListener('click', e => {
@@ -45,6 +51,12 @@ export function iniciarDetails(db) {
   document.getElementById('btnPropostaModal')?.addEventListener('click', () => {
     const lead = _leads.find(l => l.id === _leadAtualId);
     if (abrirProposta(lead)) toast('Proposta aberta', 'info');
+    else toast('Lead não encontrado', 'error');
+  });
+
+  document.getElementById('btnCotacaoKitModal')?.addEventListener('click', () => {
+    const lead = _leads.find(l => l.id === _leadAtualId);
+    if (abrirCotacaoKit(lead)) toast('Cotação de kit aberta', 'info');
     else toast('Lead não encontrado', 'error');
   });
 
@@ -178,6 +190,9 @@ export async function abrirDetalhes(id) {
 
   // Aba Financiamento
   preencherAbaFinanciamento(lead);
+
+  // Aba ⚡ Elétrica
+  renderAbaEletrica(lead);
 }
 
 function fecharDetalhes() {
@@ -331,8 +346,17 @@ async function preencherAbaInteligencia(lead) {
     const digitouNome = lead.digitouNome != null ? (lead.digitouNome ? 'Sim' : 'Não') : '—';
     const digitouTel  = lead.digitouTelefone != null ? (lead.digitouTelefone ? 'Sim' : 'Não') : (telefoneEv ? 'Sim' : '—');
 
-    let score = scoreFirestore != null ? scoreFirestore
-      : Math.min(100, simulacoes * 5 + wppLead * 20 + scrollEv * 10 + (telefoneEv ? 15 : 0) + (tempoEv ? 15 : 0));
+    // Score v2 (leadScore/scoreEngine): usa valorConta + origem + engajamento + recência.
+    // Defensivo: se o engine falhar por qualquer motivo, cai no cálculo antigo — NUNCA quebra a aba.
+    let score, motivosScore = [];
+    try {
+      const rV2 = calcularScore(lead);
+      score = rV2.score;
+      motivosScore = rV2.motivos || [];
+    } catch (_) {
+      score = scoreFirestore != null ? scoreFirestore
+        : Math.min(100, simulacoes * 5 + wppLead * 20 + scrollEv * 10 + (telefoneEv ? 15 : 0) + (tempoEv ? 15 : 0));
+    }
     const nivel    = score >= 70 ? '🔥 Quente' : score >= 30 ? '🟡 Morno' : '🟢 Frio';
     const corNivel = score >= 70 ? '#ef4444' : score >= 40 ? '#f59e0b' : '#22c55e';
     const sugestao = score >= 70 ? 'Lead pronto — abordar agora no WhatsApp.'
@@ -353,6 +377,7 @@ async function preencherAbaInteligencia(lead) {
     scoreDiv.innerHTML = `
       <div style="font-size:22px;font-weight:bold;color:${corNivel};margin-bottom:8px">${nivel}</div>
       <div style="font-size:18px;margin-bottom:12px">🎯 Score: <b>${score}/100</b></div>
+      ${motivosScore.length ? `<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.5">📊 ${motivosScore.map(m => escHtml(m)).join(' · ')}</div>` : ''}
       <hr style="border-color:rgba(255,255,255,0.08);margin:10px 0">
       <b style="color:#64748b;font-size:12px;letter-spacing:1px">COMPORTAMENTO</b>
       ${row('🔥','Eventos registrados', eventosLead.length)}
@@ -417,7 +442,7 @@ function ativarModoEdicao(lead) {
   ${campoEdit('⚡', 'Consumo (kWh/mês)', 'edit-consumo', 'number', lead.consumo, 'min="0"')}
   <label style="${EDIT_LABEL_STYLE}">⚡ Potência da placa (Wp)
     <select id="edit-potencia-placa" style="${EDIT_INPUT_STYLE}">
-      ${[400,450,500,540,580,600,650,700,750].map(w =>
+      ${[400,450,500,530,540,550,580,585,600,605,610,615,620,630,650,700,710,715,720,750].map(w =>
         `<option value="${w}"${(lead.potenciaPlaca||580)==w?' selected':''}>${w} W</option>`
       ).join('')}
     </select>

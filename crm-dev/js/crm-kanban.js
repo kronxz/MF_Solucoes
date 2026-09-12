@@ -105,9 +105,12 @@ function criarCardHtml(lead) {
   const segBadge = isEletrica
     ? '<span style="display:inline-block;margin:0 0 4px 4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#3a2a05;color:#fbbf24;border:1px solid #d97706">⚡ ELÉTRICA</span>'
     : '';
+  const emergBadge = lead.emergencia === true
+    ? '<span class="card-emergencia" style="display:inline-block;margin:0 0 4px 4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#450a0a;color:#fca5a5;border:1px solid #ef4444">🚨 EMERGÊNCIA</span>'
+    : '';
   return `
-<div class="card" draggable="true" data-lead-id="${lead.id}">
-  ${origemBadge}${segBadge}
+<div class="card${lead.emergencia === true ? ' card--emergencia' : ''}" draggable="true" data-lead-id="${lead.id}">
+  ${origemBadge}${segBadge}${emergBadge}
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>
@@ -171,6 +174,7 @@ function filtrarLeadsKanban(leads) {
 export function renderizarKanban(leads) {
   _leads = leads;
   const ativos = filtrarLeadsKanban(leads);
+  renderEmergenciasBanner(ativos);
   const colunaHtml = {};
   COLUNAS.forEach(col => { colunaHtml[col] = `<h2>${TITULOS[col]}</h2>`; });
 
@@ -192,6 +196,22 @@ export function renderizarKanban(leads) {
   });
 
   if (window.matchMedia('(max-width: 768px)').matches) mostrarColunaMobile('novo');
+}
+
+// Faixa de emergências elétricas no topo do board (⚡ atender primeiro)
+function renderEmergenciasBanner(ativos) {
+  const el = document.getElementById('kanbanEmergencias');
+  if (!el) return;
+  const urgentes = (ativos || []).filter(l => l.emergencia === true);
+  if (!urgentes.length) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = `
+<div class="kanban-emergencias-box">
+  <span class="kanban-emergencias-titulo">🚨 ${urgentes.length} emergência${urgentes.length > 1 ? 's' : ''} elétrica${urgentes.length > 1 ? 's' : ''} — atender primeiro</span>
+  <div class="kanban-emergencias-lista">
+    ${urgentes.map(l => `<button type="button" class="kanban-emergencia-item" data-detalhes="${escHtml(l.id)}">${escHtml(l.nome || 'Sem nome')}${l.telefone ? ' · 📞 ' + escHtml(l.telefone) : ''}</button>`).join('')}
+  </div>
+</div>`;
 }
 
 // ─── INICIALIZAR BOARD (eventos delegados) ────────────────────
@@ -224,6 +244,12 @@ export function iniciarKanban(db, onDetalhes) {
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);
     else if (btn.dataset.whatsapp) whatsappLead(btn.dataset.whatsapp);
     else if (btn.dataset.segmento) alternarSegmento(btn.dataset.segmento);
+  });
+
+  // Faixa de emergências: clicar no nome abre os detalhes do lead
+  document.getElementById('kanbanEmergencias')?.addEventListener('click', e => {
+    const item = e.target.closest('[data-detalhes]');
+    if (item && _onDetalhes) _onDetalhes(item.dataset.detalhes);
   });
 
   COLUNAS.forEach(col => {
