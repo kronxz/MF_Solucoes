@@ -141,12 +141,14 @@ function renderDemanda(leadId, d) {
   <div class="el-demanda-top">
     <b>${esc(nomeServico(d.tipo))}</b>
     ${badgeUrg(d.urgencia)}
+    ${d.revisar ? '<span class="el-revisar">🔎 revisar</span>' : ''}
     ${resolvida ? '<span class="el-ok">✅ resolvida</span>' : ''}
   </div>
   <div class="el-demanda-meta">
     🗓️ ${esc(fmtData(d.data))}
     ${d.fase && d.fase !== '—' ? ` · ⚡ ${esc(d.fase)}` : ''}
     ${d.valor ? ` · 💰 R$ ${esc(d.valor)}` : ''}
+    ${d.origemBot && d.origemBot !== 'bot' ? ` · 🤖 ${esc(d.origemBot)}` : ''}
   </div>
   ${d.obs ? `<div class="el-demanda-obs">📝 ${esc(d.obs)}</div>` : ''}
   ${d.fotoQuadro ? `<div class="el-demanda-foto"><a href="${esc(d.fotoQuadro)}" target="_blank" rel="noopener">📷 foto do quadro</a></div>` : ''}

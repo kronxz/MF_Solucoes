@@ -187,3 +187,4 @@
 .el-demanda-foto { font-size: 12px; margin-top: 4px; }
 .el-resolver { margin-top: 8px; background: #14532d; color: #dcfce7; border: 1px solid #22c55e; }
 @media (max-width: 768px) { .el-form-row { grid-template-columns: 1fr; } }
+.el-revisar { font-size: 11px; font-weight: 700; color: #fbbf24; background: #3a2a05; border: 1px solid #d97706; border-radius: 999px; padding: 1px 8px; }
