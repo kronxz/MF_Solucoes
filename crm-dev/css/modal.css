@@ -188,3 +188,14 @@
 .el-resolver { margin-top: 8px; background: #14532d; color: #dcfce7; border: 1px solid #22c55e; }
 @media (max-width: 768px) { .el-form-row { grid-template-columns: 1fr; } }
 .el-revisar { font-size: 11px; font-weight: 700; color: #fbbf24; background: #3a2a05; border: 1px solid #d97706; border-radius: 999px; padding: 1px 8px; }
+
+/* ⚡ E2 — fluxo próprio de elétrica (stepper Chamado→Orçamento→Execução→Concluído) */
+.el-stepper { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 10px 0 8px; font-size: 11px; }
+.el-step { color: #64748b; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--borda-sutil); }
+.el-step--done { color: #4ade80; border-color: #16a34a; }
+.el-step--on { color: #fff; background: #2563eb; border-color: #3b82f6; font-weight: 700; }
+.el-step-sep { color: #475569; }
+.el-etapa-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.el-etapa-btn { background: #334155; color: #e2e8f0; border: 1px solid var(--borda-sutil); }
+.el-etapa-btn:disabled { opacity: .4; cursor: not-allowed; }
+.el-etapa-avancar { background: #14532d; color: #dcfce7; border-color: #22c55e; }

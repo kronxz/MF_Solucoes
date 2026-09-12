@@ -34,6 +34,19 @@ export const SERVICOS_ELETRICA = [
 const FASES = ['—', 'monofásico', 'bifásico', 'trifásico'];
 const URGENCIAS = ['normal', 'urgente', 'emergência'];
 
+// E2 — fluxo próprio de elétrica (independente do funil solar)
+const ETAPAS = [
+  { id: 'chamado',   nome: '📋 Chamado' },
+  { id: 'orcamento', nome: '💰 Orçamento' },
+  { id: 'execucao',  nome: '🔧 Execução' },
+  { id: 'concluido', nome: '✅ Concluído' },
+];
+function etapaDe(d) {
+  if (d && d.etapa && ETAPAS.some(e => e.id === d.etapa)) return d.etapa;
+  return (d && d.status === 'resolvida') ? 'concluido' : 'chamado'; // back-compat (demandas antigas/bot)
+}
+function etapaIdx(d) { return ETAPAS.findIndex(e => e.id === etapaDe(d)); }
+
 let _db = null;
 let _getLead = null;   // (id) => lead | undefined
 
@@ -58,9 +71,9 @@ function badgeUrg(urg) {
   return `<span class="el-urg" style="color:${cor}">${ic} ${esc(urg)}</span>`;
 }
 
-/** true se o lead tem alguma demanda de emergência ainda aberta. */
+/** true se o lead tem alguma demanda de emergência ainda não concluída. */
 function calcEmergencia(demandas) {
-  return (demandas || []).some(d => d.urgencia === 'emergência' && d.status !== 'resolvida');
+  return (demandas || []).some(d => d.urgencia === 'emergência' && etapaDe(d) !== 'concluido');
 }
 
 // ─── INIT: liga os botões da aba (delegação no modal) ─────────────────
@@ -73,9 +86,11 @@ export function iniciarEletrica(db, getLead) {
 
   modal.addEventListener('click', async e => {
     const reg = e.target.closest('[data-eletrica-registrar]');
-    const res = e.target.closest('[data-eletrica-resolver]');
+    const adv = e.target.closest('[data-eletrica-avancar]');
+    const vol = e.target.closest('[data-eletrica-voltar]');
     if (reg) { e.preventDefault(); await registrarDemanda(reg.dataset.eletricaRegistrar); }
-    else if (res) { e.preventDefault(); await resolverDemanda(res.dataset.eletricaResolver, res.dataset.demandaId); }
+    else if (adv) { e.preventDefault(); await moverEtapa(adv.dataset.eletricaAvancar, adv.dataset.demandaId, 'avancar'); }
+    else if (vol) { e.preventDefault(); await moverEtapa(vol.dataset.eletricaVoltar, vol.dataset.demandaId, 'voltar'); }
   });
 }
 
@@ -135,14 +150,18 @@ ${demandas.length ? `<div class="el-historico">${demandas.map(d => renderDemanda
 }
 
 function renderDemanda(leadId, d) {
-  const resolvida = d.status === 'resolvida';
+  const idx = etapaIdx(d);
+  const concluida = etapaDe(d) === 'concluido';
+  const stepper = ETAPAS.map((e, i) =>
+    `<span class="el-step${i === idx ? ' el-step--on' : ''}${i < idx ? ' el-step--done' : ''}">${esc(e.nome)}</span>`
+  ).join('<span class="el-step-sep">›</span>');
+  const lid = esc(leadId), did = esc(d.id);
   return `
-<div class="el-demanda${resolvida ? ' el-demanda--ok' : ''}">
+<div class="el-demanda${concluida ? ' el-demanda--ok' : ''}">
   <div class="el-demanda-top">
     <b>${esc(nomeServico(d.tipo))}</b>
     ${badgeUrg(d.urgencia)}
     ${d.revisar ? '<span class="el-revisar">🔎 revisar</span>' : ''}
-    ${resolvida ? '<span class="el-ok">✅ resolvida</span>' : ''}
   </div>
   <div class="el-demanda-meta">
     🗓️ ${esc(fmtData(d.data))}
@@ -152,7 +171,11 @@ function renderDemanda(leadId, d) {
   </div>
   ${d.obs ? `<div class="el-demanda-obs">📝 ${esc(d.obs)}</div>` : ''}
   ${d.fotoQuadro ? `<div class="el-demanda-foto"><a href="${esc(d.fotoQuadro)}" target="_blank" rel="noopener">📷 foto do quadro</a></div>` : ''}
-  ${!resolvida ? `<button type="button" class="btn-card el-resolver" data-eletrica-resolver="${esc(leadId)}" data-demanda-id="${esc(d.id)}">✅ Marcar resolvida</button>` : ''}
+  <div class="el-stepper">${stepper}</div>
+  <div class="el-etapa-acoes">
+    <button type="button" class="btn-card el-etapa-btn" data-eletrica-voltar="${lid}" data-demanda-id="${did}" ${idx <= 0 ? 'disabled' : ''}>◀ Voltar</button>
+    <button type="button" class="btn-card el-etapa-btn el-etapa-avancar" data-eletrica-avancar="${lid}" data-demanda-id="${did}" ${idx >= ETAPAS.length - 1 ? 'disabled' : ''}>Avançar ▶</button>
+  </div>
 </div>`;
 }
 
@@ -201,15 +224,27 @@ async function registrarDemanda(leadId) {
   }
 }
 
-async function resolverDemanda(leadId, demandaId) {
+// E2 — avança/volta a etapa do fluxo elétrico (Chamado→Orçamento→Execução→Concluído)
+async function moverEtapa(leadId, demandaId, dir) {
   const lead = _getLead(leadId);
   if (!lead) return;
-  const demandas = (Array.isArray(lead.demandas_eletrica) ? lead.demandas_eletrica : []).map(d =>
-    d.id === demandaId ? { ...d, status: 'resolvida', resolvidaEm: new Date().toISOString() } : d
-  );
   const agora = new Date().toISOString();
+  let nomeEtapa = '';
+  const demandas = (Array.isArray(lead.demandas_eletrica) ? lead.demandas_eletrica : []).map(d => {
+    if (d.id !== demandaId) return d;
+    let i = etapaIdx(d) + (dir === 'avancar' ? 1 : -1);
+    i = Math.max(0, Math.min(ETAPAS.length - 1, i));
+    const etapa = ETAPAS[i].id;
+    nomeEtapa = ETAPAS[i].nome;
+    return {
+      ...d,
+      etapa,
+      status: etapa === 'concluido' ? 'resolvida' : 'aberta', // back-compat p/ quem lê status
+      concluidaEm: etapa === 'concluido' ? agora : (d.concluidaEm || null),
+    };
+  });
   const historico = Array.isArray(lead.historico) ? lead.historico.slice() : [];
-  historico.push({ acao: 'Demanda elétrica resolvida', data: agora });
+  historico.push({ acao: `Elétrica → ${nomeEtapa}`, data: agora });
   try {
     await updateDoc(doc(_db, colDoLead(lead), leadId), {
       demandas_eletrica: demandas,
@@ -220,9 +255,9 @@ async function resolverDemanda(leadId, demandaId) {
     lead.demandas_eletrica = demandas;
     lead.emergencia = calcEmergencia(demandas);
     renderAbaEletrica(lead);
-    toast('Demanda marcada como resolvida', 'success');
+    toast('Etapa → ' + nomeEtapa, 'success');
   } catch (err) {
-    console.error('[CRM-Elétrica] resolverDemanda erro:', err);
-    toast('Erro ao resolver', 'error');
+    console.error('[CRM-Elétrica] moverEtapa erro:', err);
+    toast('Erro ao mudar etapa', 'error');
   }
 }
