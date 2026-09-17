@@ -103,19 +103,27 @@ function renderArquivados() {
     return;
   }
 
-  lista.innerHTML = arquivados.map(l => `
+  lista.innerHTML = arquivados.map(l => {
+    const isEletrica = String(l.segmento || '').toLowerCase() === 'eletrica';
+    const seg = isEletrica ? '⚡ Elétrica' : '☀️ Solar';
+    const dem = Array.isArray(l.demandas_eletrica) ? l.demandas_eletrica : [];
+    const totalPago = dem.filter(d => d.pago)
+      .reduce((s, d) => s + (parseFloat(String(d.valorPago || d.valor || '').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0), 0);
+    return `
 <div class="lixeira-card glass-card" role="listitem">
   <div class="lixeira-info">
-    <b>${escHtml(l.nome || 'Sem nome')}</b>
+    <b>${escHtml(l.nome || 'Sem nome')} <span style="font-size:11px;color:var(--texto-secundario)">· ${seg}</span></b>
     <small>📞 ${escHtml(l.telefone || '-')}</small>
+    ${totalPago > 0 ? `<small style="color:#4ade80">✅ Recebido: R$ ${totalPago.toLocaleString('pt-BR')}</small>` : ''}
     <small>💰 R$ ${escHtml(l.valor || l.contaDeLuz || '-')}</small>
-    <small style="color:var(--texto-secundario)">Arquivado: ${formatarData(l.arquivadoEm)}</small>
+    <small style="color:var(--texto-secundario)">Arquivado: ${formatarData(l.arquivadoEm)} · 💤 volta sozinho se o cliente falar</small>
   </div>
   <div class="lixeira-actions">
     <button type="button" class="btn-card btn-whatsapp" data-restaurar-arq="${l.id}">♻️ Restaurar</button>
     <button type="button" class="btn-card btn-excluir" data-excluir-arq="${l.id}">❌ Excluir</button>
   </div>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 async function restaurarLead(id) {

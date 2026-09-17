@@ -88,9 +88,13 @@ export function iniciarEletrica(db, getLead) {
     const reg = e.target.closest('[data-eletrica-registrar]');
     const adv = e.target.closest('[data-eletrica-avancar]');
     const vol = e.target.closest('[data-eletrica-voltar]');
+    const pag = e.target.closest('[data-eletrica-pagar]');
+    const des = e.target.closest('[data-eletrica-despagar]');
     if (reg) { e.preventDefault(); await registrarDemanda(reg.dataset.eletricaRegistrar); }
     else if (adv) { e.preventDefault(); await moverEtapa(adv.dataset.eletricaAvancar, adv.dataset.demandaId, 'avancar'); }
     else if (vol) { e.preventDefault(); await moverEtapa(vol.dataset.eletricaVoltar, vol.dataset.demandaId, 'voltar'); }
+    else if (pag) { e.preventDefault(); await marcarPago(pag.dataset.eletricaPagar, pag.dataset.demandaId); }
+    else if (des) { e.preventDefault(); await marcarPago(des.dataset.eletricaDespagar, des.dataset.demandaId, true); }
   });
 }
 
@@ -171,12 +175,55 @@ function renderDemanda(leadId, d) {
   </div>
   ${d.obs ? `<div class="el-demanda-obs">📝 ${esc(d.obs)}</div>` : ''}
   ${d.fotoQuadro ? `<div class="el-demanda-foto"><a href="${esc(d.fotoQuadro)}" target="_blank" rel="noopener">📷 foto do quadro</a></div>` : ''}
+  ${renderPagamento(lid, did, d)}
   <div class="el-stepper">${stepper}</div>
   <div class="el-etapa-acoes">
     <button type="button" class="btn-card el-etapa-btn" data-eletrica-voltar="${lid}" data-demanda-id="${did}" ${idx <= 0 ? 'disabled' : ''}>◀ Voltar</button>
     <button type="button" class="btn-card el-etapa-btn el-etapa-avancar" data-eletrica-avancar="${lid}" data-demanda-id="${did}" ${idx >= ETAPAS.length - 1 ? 'disabled' : ''}>Avançar ▶</button>
   </div>
 </div>`;
+}
+
+// ─── PAGAMENTO (valor cobrado/pago do serviço prestado) ───────────────
+// A demanda já tem `valor` (cobrado). Aqui registra que FOI PAGO + quanto entrou.
+function renderPagamento(lid, did, d) {
+  if (d.pago) {
+    return `<div class="el-pago-row el-pago-row--ok">
+  <span class="el-pago-ok">✅ Pago: R$ ${esc(d.valorPago || d.valor || '—')}${d.pagoEm ? ' · ' + esc(fmtData(d.pagoEm)) : ''}</span>
+  <button type="button" class="btn-card el-pago-desfazer" data-eletrica-despagar="${lid}" data-demanda-id="${did}">desfazer</button>
+</div>`;
+  }
+  return `<div class="el-pago-row">
+  <input class="el-pago-input" id="elPago-${did}" type="text" inputmode="decimal" placeholder="valor recebido (R$)" value="${esc(d.valor || '')}">
+  <button type="button" class="btn-card el-pago-btn" data-eletrica-pagar="${lid}" data-demanda-id="${did}">💰 Marcar pago</button>
+</div>`;
+}
+
+async function marcarPago(leadId, demandaId, desfazer = false) {
+  const lead = _getLead(leadId);
+  if (!lead) { toast('Lead não encontrado', 'error'); return; }
+  const agora = new Date().toISOString();
+  const inp = document.getElementById('elPago-' + demandaId);
+  const valorPago = (inp?.value || '').trim();
+  let nome = '', valorReg = '';
+  const demandas = (Array.isArray(lead.demandas_eletrica) ? lead.demandas_eletrica : []).map(d => {
+    if (d.id !== demandaId) return d;
+    nome = nomeServico(d.tipo);
+    if (desfazer) return { ...d, pago: false, valorPago: '', pagoEm: null };
+    valorReg = valorPago || d.valor || '';
+    return { ...d, pago: true, valorPago: valorReg, pagoEm: agora };
+  });
+  const historico = Array.isArray(lead.historico) ? lead.historico.slice() : [];
+  historico.push({ acao: desfazer ? `Pagamento desfeito: ${nome}` : `💰 Pago R$ ${valorReg} — ${nome}`, data: agora });
+  try {
+    await updateDoc(doc(_db, colDoLead(lead), leadId), { demandas_eletrica: demandas, historico, lastAction: agora });
+    lead.demandas_eletrica = demandas;
+    renderAbaEletrica(lead);
+    toast(desfazer ? 'Pagamento desfeito' : `💰 Pago R$ ${valorReg} registrado`, 'success');
+  } catch (err) {
+    console.error('[CRM-Elétrica] marcarPago erro:', err);
+    toast('Erro ao registrar pagamento', 'error');
+  }
 }
 
 // ─── GRAVAÇÃO ─────────────────────────────────────────────────────────

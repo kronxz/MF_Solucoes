@@ -49,6 +49,44 @@ let _leads = [];
 let _onDetalhes = null;
 let _dragId = null;
 let _filtro = { busca: '', status: '', ordenar: 'recente' };
+// Leads sendo reativados nesta sessão (evita gravação dupla enquanto o write propaga)
+const _reativando = new Set();
+
+// ─── ARQUIVO INTELIGENTE: reativação automática no re-contato ──
+// O bot faz merge por telefone e bumpa `lastActivity` (ISO) quando o cliente volta a falar,
+// mas PRESERVA o status — então um lead 'arquivado' que volta a escrever fica escondido.
+// Regra limpa (sem falso positivo): `lastActivity` é gravado SÓ pelos bots (inbound); o CRM
+// usa `lastAction`. Se lastActivity > arquivadoEm ⇒ o cliente voltou DEPOIS de arquivado ⇒
+// reaquece e devolve ao funil, sem perder demandas_eletrica[] nem histórico (nunca tocados).
+async function reativarPorRecontato(lead) {
+  if (_reativando.has(lead.id)) return;
+  _reativando.add(lead.id);
+  const { db: leadDb, collection: col } = getLeadSource(lead);
+  const agora = new Date().toISOString();
+  const historico = Array.isArray(lead.historico) ? lead.historico.slice() : [];
+  historico.push({ acao: '♻️ Reativado automaticamente — cliente voltou a falar', data: agora });
+  try {
+    await updateDoc(doc(leadDb, col, lead.id), {
+      status: 'novo',
+      arquivadoEm: null,
+      reaquecido: true,
+      reativadoEm: agora,
+      historico,
+    });
+    toast('♻️ ' + (lead.nome || 'Lead') + ' voltou a falar — reativado no funil', 'success');
+  } catch (err) {
+    console.error('[CRM-Reativacao] erro', err);
+    _reativando.delete(lead.id); // libera p/ tentar de novo no próximo snapshot
+  }
+}
+function varrerReativacao(leads) {
+  for (const l of (leads || [])) {
+    if (l.status !== 'arquivado' || !l.arquivadoEm || !l.lastActivity) continue;
+    const arq = toDateFromFirestore(l.arquivadoEm);
+    const act = toDateFromFirestore(l.lastActivity);
+    if (arq && act && act.getTime() > arq.getTime()) reativarPorRecontato(l);
+  }
+}
 
 // ─── UTILITÁRIOS ──────────────────────────────────────────────
 export function normalizarStatus(status) {
@@ -108,9 +146,12 @@ function criarCardHtml(lead) {
   const emergBadge = lead.emergencia === true
     ? '<span class="card-emergencia" style="display:inline-block;margin:0 0 4px 4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#450a0a;color:#fca5a5;border:1px solid #ef4444">🚨 EMERGÊNCIA</span>'
     : '';
+  const reaqBadge = lead.reaquecido === true
+    ? '<span title="Cliente voltou a falar depois de arquivado" style="display:inline-block;margin:0 0 4px 4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#3a1d05;color:#fdba74;border:1px solid #f97316">♻️ REAQUECIDO</span>'
+    : '';
   return `
 <div class="card${lead.emergencia === true ? ' card--emergencia' : ''}" draggable="true" data-lead-id="${lead.id}">
-  ${origemBadge}${segBadge}${emergBadge}
+  ${origemBadge}${segBadge}${emergBadge}${reaqBadge}
   <b class="card-nome">${escHtml(lead.nome || 'Sem nome')}</b>
   ${crmCardIntel(lead)}
   <div class="card-alerta" style="color:${alerta.cor}">${alerta.texto}</div>
@@ -173,6 +214,7 @@ function filtrarLeadsKanban(leads) {
 // ─── RENDERIZAR BOARD ─────────────────────────────────────────
 export function renderizarKanban(leads) {
   _leads = leads;
+  varrerReativacao(leads); // arquivo inteligente: quem voltou a falar reaquece sozinho
   const ativos = filtrarLeadsKanban(leads);
   renderEmergenciasBanner(ativos);
   const colunaHtml = {};
@@ -198,18 +240,31 @@ export function renderizarKanban(leads) {
   if (window.matchMedia('(max-width: 768px)').matches) mostrarColunaMobile('novo');
 }
 
+// Emergências que o Marcos já dispensou (X) — guardadas no navegador
+function emergDispensadas() {
+  try { return JSON.parse(localStorage.getItem('mf_emerg_dispensadas') || '[]'); } catch { return []; }
+}
+function dispensarEmerg(id) {
+  try { const s = new Set(emergDispensadas()); s.add(id); localStorage.setItem('mf_emerg_dispensadas', JSON.stringify([...s])); } catch {}
+}
+
 // Faixa de emergências elétricas no topo do board (⚡ atender primeiro)
 function renderEmergenciasBanner(ativos) {
   const el = document.getElementById('kanbanEmergencias');
   if (!el) return;
-  const urgentes = (ativos || []).filter(l => l.emergencia === true);
+  const disp = new Set(emergDispensadas());
+  const urgentes = (ativos || []).filter(l => l.emergencia === true && !disp.has(l.id));
   if (!urgentes.length) { el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
+  const xStyle = 'background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:50%;width:22px;height:22px;line-height:20px;text-align:center;cursor:pointer;font-weight:bold;padding:0;flex:0 0 auto;';
   el.innerHTML = `
 <div class="kanban-emergencias-box">
   <span class="kanban-emergencias-titulo">🚨 ${urgentes.length} emergência${urgentes.length > 1 ? 's' : ''} elétrica${urgentes.length > 1 ? 's' : ''} — atender primeiro</span>
   <div class="kanban-emergencias-lista">
-    ${urgentes.map(l => `<button type="button" class="kanban-emergencia-item" data-detalhes="${escHtml(l.id)}">${escHtml(l.nome || 'Sem nome')}${l.telefone ? ' · 📞 ' + escHtml(l.telefone) : ''}</button>`).join('')}
+    ${urgentes.map(l => `<span style="display:inline-flex;align-items:center;gap:6px;">
+      <button type="button" class="kanban-emergencia-item" data-detalhes="${escHtml(l.id)}">${escHtml(l.nome || 'Sem nome')}${l.telefone ? ' · 📞 ' + escHtml(l.telefone) : ''}</button>
+      <button type="button" data-dispensar="${escHtml(l.id)}" title="Já resolvi — dispensar esta emergência" aria-label="Dispensar" style="${xStyle}">✕</button>
+    </span>`).join('')}
   </div>
 </div>`;
 }
@@ -221,6 +276,24 @@ export function iniciarKanban(db, onDetalhes) {
 
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
+
+  // X da tarja de emergência (dispensar) + abrir detalhes pelo chip
+  const emergEl = document.getElementById('kanbanEmergencias');
+  if (emergEl && !emergEl._wired) {
+    emergEl._wired = true;
+    emergEl.addEventListener('click', e => {
+      const x = e.target.closest('[data-dispensar]');
+      if (x) {
+        dispensarEmerg(x.dataset.dispensar);
+        const item = x.closest('span'); if (item) item.remove();
+        const lista = emergEl.querySelector('.kanban-emergencias-lista');
+        if (lista && !lista.children.length) { emergEl.hidden = true; emergEl.innerHTML = ''; }
+        return;
+      }
+      const det = e.target.closest('[data-detalhes]');
+      if (det && _onDetalhes) _onDetalhes(det.dataset.detalhes);
+    });
+  }
 
   // Delegação de eventos: todos os botões de card
   board.addEventListener('click', e => {
