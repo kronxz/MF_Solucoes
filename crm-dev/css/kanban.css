@@ -18,12 +18,12 @@
 /* ── PC: todas as colunas cabem na tela sem scroll ─────────────── */
 @media (min-width: 769px) {
   .board {
-    overflow-x: hidden;
+    overflow-x: auto;   /* 15/10: em tela estreita (CRM dentro do app) rola em vez de ESMAGAR as colunas */
     gap: 8px;
   }
   .column {
     flex: 1 1 0;        /* cresce e encolhe igualmente */
-    min-width: 0;       /* permite encolher abaixo de 290px */
+    min-width: 190px;   /* 15/10: abaixo disso os botões vazavam do cartão (colunas de ~120 px); 190 = "💬 WhatsApp" inteiro */
     max-width: none;
     width: 0;           /* força o flex a distribuir espaço */
   }
@@ -76,7 +76,10 @@
 .card-nome { font-size: 15px; display: block; margin-bottom: 4px; }
 .card-alerta { font-weight: 700; font-size: 11px; margin: 4px 0; }
 .card-utm { border-radius: 8px !important; }
-.card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 10px; }
+.card { min-width: 0; overflow: hidden; }   /* nada vaza do cartão */
+.card-nome, .card-utm b { overflow-wrap: anywhere; }   /* nome/campanha longos quebram em vez de vazar */
+/* 2 botões por linha que ENCOLHEM (minmax(0,…)) e quebram o texto — nunca vazam do cartão */
+.card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-top: 10px; }
 
 .btn-card {
   padding: 7px 6px;
@@ -89,6 +92,9 @@
   transition: 0.15s;
   color: #fff;
   width: 100%;
+  min-width: 0;
+  white-space: normal;   /* texto do botão quebra em vez de estourar */
+  line-height: 1.2;
 }
 
 .btn-card:hover { filter: brightness(1.2); transform: translateY(-1px); }
@@ -99,7 +105,9 @@
 .btn-excluir { background: #ef4444; }
 .btn-detalhes { background: #0ea5e9; }
 .btn-proposta { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
-.btn-fechar-venda { background: #22c55e; grid-column: span 2; }
+.btn-fechar-venda { background: #22c55e; grid-column: 1 / -1; }
+.btn-arquivar { background: #334155; }                                   /* 15/10: estava sem cor (texto solto) */
+.btn-segmento { background: transparent; border: 1px solid #f59e0b; color: #fbbf24; grid-column: 1 / -1; }   /* linha inteira, sem criar coluna extra */
 
 .mobile-kanban-tabs {
   display: none;
