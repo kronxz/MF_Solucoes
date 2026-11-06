@@ -3,6 +3,29 @@
  */
 
 import { escHtml, parseDataFirestore, emptyStateHtml } from './crm-utils.js';
+import { collection, getDocs, query, orderBy, limit } from
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { db } from '../firebase/config.js';
+
+// 06/11/2026: a tela lia SÓ a coleção antiga `eventos` (parou em maio/2026). A landing atual grava cada
+// visita em `landing_visits` (js/visit-tracking.js). Agora junta as duas: landing_visits vira o mesmo
+// formato de evento 'pagina_abriu'. Lê 1x a cada 2 min (custo: ~1 leitura por visita, limite 2000).
+let _visitasLanding = null, _lidoEm = 0, _lendo = false, _ultimoRender = null;
+async function carregarLandingVisits() {
+  if (_lendo || (Date.now() - _lidoEm < 120000 && _visitasLanding)) return;
+  _lendo = true;
+  try {
+    const snap = await getDocs(query(collection(db, 'landing_visits'), orderBy('timestamp', 'desc'), limit(2000)));
+    _visitasLanding = snap.docs.map(d => {
+      const v = d.data();
+      return { id: d.id, evento: 'pagina_abriu', criadoEm: v.timestamp, sessionId: v.sessionId || d.id,
+        utm_source: v.utm_source || 'direto', utm_medium: v.utm_medium || '', utm_campaign: v.utm_campaign || '' };
+    });
+    _lidoEm = Date.now();
+    if (_ultimoRender) renderizarVisitas(_ultimoRender);   // redesenha com as visitas reais
+  } catch (e) { console.warn('[visitas] landing_visits:', e.message); }
+  finally { _lendo = false; }
+}
 
 const _charts = {};
 
@@ -29,9 +52,12 @@ function novoGrafico(id, config) {
   _charts[id] = new Chart(canvas, config);
 }
 
-export function renderizarVisitas(eventos) {
+export function renderizarVisitas(eventosAntigos) {
   const el = document.getElementById('visitasConteudo');
   if (!el) return;
+  _ultimoRender = eventosAntigos || [];
+  carregarLandingVisits();
+  const eventos = [...(_visitasLanding || []), ...(eventosAntigos || [])];
   const meta = document.getElementById('visitasMeta');
 
   // ── agrega ──
@@ -67,7 +93,7 @@ export function renderizarVisitas(eventos) {
   const topOrigem = origensOrdenadas[0] ? origensOrdenadas[0][0] : '—';
 
   // ── meta ──
-  if (meta) meta.textContent = `${totalSessoes} sessões · ${pageviews} pageviews · ${origensOrdenadas.length} origens · tempo real`;
+  if (meta) meta.textContent = `${totalSessoes} sessões · ${pageviews} pageviews · ${origensOrdenadas.length} origens · tempo real · fonte: landing_visits + eventos`;
 
   // ── KPIs ──
   const kpis = document.getElementById('visitasKpis');
