@@ -14,6 +14,7 @@ import { calcularScore } from './scoreEngine.esm.js';
 import { toast, escHtml } from './crm-utils.js';
 import { renderHtmlFinanciamento, renderHtmlKitResumo } from './crm-finance.js';
 import { iniciarEletrica, renderAbaEletrica } from './crm-eletrica.js';
+import { iniciarDocumentos, renderAbaDocumentos } from './crm-documentos.js';
 import {
   renderTimelineMiniHtml,
   formatTempoRelativo,
@@ -34,6 +35,7 @@ export function iniciarDetails(db) {
 
   // Módulo ⚡ Elétrica (aba do modal) — lê o lead atual pela lista local
   iniciarEletrica(db, id => _leads.find(l => l.id === id));
+  iniciarDocumentos(db, id => _leads.find(l => l.id === id));
 
   // Fechar modal
   document.getElementById('btnFecharModal')?.addEventListener('click', fecharDetalhes);
@@ -193,6 +195,9 @@ export async function abrirDetalhes(id) {
 
   // Aba ⚡ Elétrica
   renderAbaEletrica(lead);
+
+  // Aba 📂 Documentos
+  renderAbaDocumentos(lead);
 }
 
 function fecharDetalhes() {
