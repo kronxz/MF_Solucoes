@@ -514,6 +514,10 @@ function whatsappLead(id) {
   if (!lead) return;
   const numero = String(lead.telefone || '').replace(/\D/g, '');
   const msg = `Olá ${lead.nome}, preparei sua proposta de energia solar.\n\nHoje ainda consigo manter as condições especiais.\n\nPosso te explicar em 2 minutos?`;
+  // iPhone com WhatsApp + WhatsApp Business: o link wa.me SEMPRE abre o pessoal (não há link que force o Business).
+  // Então copiamos número + mensagem antes — se abrir o app errado, é só colar no Business.
+  try { navigator.clipboard?.writeText('+55' + numero + ' — ' + msg); } catch (_) {}
+  toast('Número e mensagem copiados — se abriu o WhatsApp pessoal, cole no Business', 'info');
   window.open('https://wa.me/55' + numero + '?text=' + encodeURIComponent(msg));
 }
 

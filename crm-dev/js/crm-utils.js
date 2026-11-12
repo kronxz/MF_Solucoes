@@ -92,9 +92,15 @@ export function iniciarSidebarMobile() {
     document.body.style.overflow = '';
   };
 
-  toggle.addEventListener('click', () => {
+  // iPhone/Chrome (11/11/2026): o toque às vezes não virava "click" — trata pointerup e evita disparo duplo.
+  let ultimo = 0;
+  const alternar = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const agora = Date.now(); if (agora - ultimo < 350) return; ultimo = agora;
     sidebar.classList.contains('aberto') ? fechar() : (sidebar.classList.add('aberto'), backdrop?.classList.add('ativo'), document.body.style.overflow = 'hidden');
-  });
+  };
+  toggle.addEventListener('pointerup', alternar);
+  toggle.addEventListener('click', alternar);
 
   backdrop?.addEventListener('click', fechar);
   document.querySelectorAll('.sidebar-btn[data-page]').forEach(btn => {
