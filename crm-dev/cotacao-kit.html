@@ -54,8 +54,8 @@
   <div class="folha">
     <div class="top">
       <div>
-        <h1>COTAÇÃO DE KIT FOTOVOLTAICO</h1>
-        <div class="sub">Lista de materiais e serviços</div>
+        <h1>COTAÇÃO DE MATERIAIS E SERVIÇOS — SISTEMA FOTOVOLTAICO</h1>
+        <div class="sub" id="cotNum">Documento emitido por MF Soluções Elétricas — validade de 15 dias</div>
       </div>
       <div class="emp">
         <b>MF SOLUÇÕES ELÉTRICAS</b><br>
@@ -72,6 +72,12 @@
       </table>
       <h2>🛠️ Serviços</h2>
       <table><tbody id="servicos"></tbody></table>
+      <div id="totalBox" style="display:none;margin-top:16px;background:var(--navy);color:#fff;border-radius:8px;padding:14px 18px;justify-content:space-between;align-items:center">
+        <span style="font-size:15px;letter-spacing:.5px">VALOR TOTAL</span><b id="totalVal" style="font-size:20px">—</b>
+      </div>
+      <div style="margin-top:12px;background:#fff8e1;border-left:4px solid var(--gold);padding:10px 12px;font-size:12px;line-height:1.5">
+        <b>Sobre a economia:</b> o sistema <b>reduz</b> a conta de energia — não a zera. A ENEL mantém a cobrança do custo de disponibilidade e da COSIP mesmo com geração própria. Os valores de economia constam da proposta comercial que acompanha esta cotação.
+      </div>
       <div class="obs" id="obs"></div>
       <div class="rt">
         <b>Responsável Técnico:</b> Marcos Felipe Machado de Almeida — Técnico em Eletrotécnica · CFT 14254334729
@@ -87,24 +93,27 @@ try { D = JSON.parse(localStorage.getItem('cotacaoKit') || '{}'); } catch(e){ D 
 // Baixadas 1x do bucket público fotos-prd. Itens sem foto (string box, disjuntor,
 // eletroduto, placa de advertência) caem no placeholder 📦.
 const IMG_MAT = {
-  modulo:'modulo.jpg', inversor:'inversor.png', mc4:'mc4.jpg', stringbox:'stringbox.jpg',
-  perfil:'perfil.png', juncao:'juncao.jpg', grampo:'grampo.png',
-  fixador_fibro:'fixador_fibro.jpg', colonial:'colonial.jpg',
+  modulo:'modulo.jpg', inversor:'inversor.png', mc4:'mf_mc4.jpg', stringbox:'stringbox.jpg',
+  perfil:'mf_perfil.jpg', juncao:'mf_juncao.jpg', grampo:'mf_grampo.jpg', grampo_final:'mf_grampo_final.jpg', garra:'mf_garra.jpg', cabo:'mf_cabo.jpg',
+  fixador_fibro:'fixador_fibro.jpg', colonial:'mf_colonial.jpg',
   dps:'dps.jpg', haste:'haste.jpg', solo:'solo.jpg'
 };
 function slugMat(desc){
   const d = (desc || '').toLowerCase();
   if (/inversor/.test(d)) return 'inversor';
+  if (/perfil/.test(d)) return 'perfil';           // antes do módulo: "Perfil de fixação de módulo"
   if (/módulo|modulo/.test(d)) return 'modulo';
   if (/string ?box/.test(d)) return 'stringbox';
   if (/mc4|conector/.test(d)) return 'mc4';
-  // cabo solar e condutor de aterramento: sem foto correta no Belenus (o "cabo" de lá é de bateria) → 📦
+  if (/cabo solar/.test(d)) return 'cabo';   // foto do cabo solar 4/6 mm² (cotação Belenus 11/11/2026)
   if (/prisioneiro|fibrocimento/.test(d)) return 'fixador_fibro';
   if (/gancho|colonial/.test(d)) return 'colonial';
   if (/trilho|metálic|metalic/.test(d)) return 'perfil'; // fallback
   if (/perfil/.test(d)) return 'perfil';
   if (/junção|juncao|junc/.test(d)) return 'juncao';
-  if (/grampo|garra/.test(d)) return 'grampo';      // garra → grampo (mesma família)
+  if (/garra/.test(d)) return 'garra';
+  if (/grampo final/.test(d)) return 'grampo_final';
+  if (/grampo/.test(d)) return 'grampo';
   if (/dps/.test(d)) return 'dps';
   if (/haste/.test(d)) return 'haste';
   if (/estrutura de solo|solo|laje|triangular/.test(d)) return 'solo';
@@ -153,7 +162,7 @@ function render(){
 
   const materiais = [
     ['Módulo fotovoltaico ' + P + ' Wp', N + ' pç'],
-    ['Inversor monofásico ~' + String(inversorKw).replace('.', ',') + ' kW — 2 MPPT — 220 V', '1 pç'],
+    [D.inversor ? ('Inversor ' + esc(D.inversor)) : ('Inversor monofásico ~' + String(inversorKw).replace('.', ',') + ' kW — 2 MPPT — 220 V'), '1 pç'],
     ['Cabo solar 6 mm² 1,8 kV CC (preto e vermelho)', 'conforme percurso'],
     ['Conector solar MC4 (macho + fêmea)', (N > 8 ? '4' : '2') + ' pares'],
     ['String Box CC 1000 V (proteção do gerador)', '1 pç'],
@@ -188,9 +197,15 @@ function render(){
   document.getElementById('obs').innerHTML =
     'Estrutura de fixação especificada para <b>' + telhadoLabel + '</b>. ' +
     'Quantidades de fixação, cabo, eletroduto e acessórios são <b>estimativa</b> — confirmadas no levantamento técnico em campo, sem alteração do valor combinado. ' +
-    'Os equipamentos entregues serão exatamente os do projeto aprovado pela ENEL — qualquer substituição de marca/modelo exige reemissão do projeto.';
+    'Os equipamentos entregues serão exatamente os do projeto aprovado pela ENEL — qualquer substituição de marca/modelo exige reemissão do projeto. ' +
+    'Materiais reservados mediante confirmação do pedido; prazos contados a partir da aprovação do projeto na ENEL; a instalação só é executada após essa aprovação.';
 
-  document.title = D.cliente ? ('Cotação de Kit — ' + D.cliente) : 'Cotação de Kit — MF Soluções';
+  const hoje = new Date(), val = new Date(Date.now() + 15*864e5), f = d => d.toLocaleDateString('pt-BR');
+  document.getElementById('cotNum').textContent = 'Nº ' + (D.numero || 'COT-' + hoje.getFullYear()) + ' · Emissão ' + f(hoje) + ' · Válida até ' + f(val);
+  const inv = Number(D.investimento) || 0;
+  if (inv > 0) { document.getElementById('totalBox').style.display = 'flex';
+    document.getElementById('totalVal').textContent = inv.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  document.title = D.cliente ? ('Cotação de Materiais e Serviços — ' + D.cliente) : 'Cotação — MF Soluções';
 }
 
 // telhado default por concessionária/região: fibrocimento é o mais comum em Maricá

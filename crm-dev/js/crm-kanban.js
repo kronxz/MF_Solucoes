@@ -19,6 +19,7 @@ import {
   toDateFromFirestore
 } from './crm-realtime.js';
 import { abrirProposta as abrirPropostaLead } from './crm-proposal.js';
+import { abrirCotacaoKit } from './crm-cotacao-kit.js';
 import { toast } from './crm-utils.js';
 
 // ─── ESCAPE HTML (local implementation) ────────────────────────
@@ -171,6 +172,7 @@ function criarCardHtml(lead) {
     <button type="button" class="btn-card btn-arquivar" data-arquivar="${lead.id}">📦 Arquivar</button>
     <button type="button" class="btn-card btn-detalhes" data-detalhes="${lead.id}">📊 Detalhes</button>
     <button type="button" class="btn-card btn-proposta" data-proposta="${lead.id}">📄 Proposta</button>
+    <button type="button" class="btn-card btn-proposta" data-cotacao="${lead.id}">📦 Cotação</button>
     <button type="button" class="btn-card btn-fechar-venda" data-fechar="${lead.id}">💰 Fechar Venda</button>
     <button type="button" class="btn-card btn-segmento" data-segmento="${lead.id}">${isEletrica ? '☀️ p/ Solar' : '⚡ p/ Elétrica'}</button>
   </div>
@@ -305,7 +307,7 @@ export function iniciarKanban(db, onDetalhes) {
       return;
     }
 
-    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-fechar],[data-whatsapp],[data-segmento]');
+    const btn = e.target.closest('[data-mover],[data-voltar],[data-excluir],[data-arquivar],[data-detalhes],[data-proposta],[data-cotacao],[data-fechar],[data-whatsapp],[data-segmento]');
     if (!btn) return;
 
     if (btn.dataset.mover) moverLead(btn.dataset.mover);
@@ -314,6 +316,7 @@ export function iniciarKanban(db, onDetalhes) {
     else if (btn.dataset.arquivar) arquivarLead(btn.dataset.arquivar);
     else if (btn.dataset.detalhes && _onDetalhes) _onDetalhes(btn.dataset.detalhes);
     else if (btn.dataset.proposta) abrirProposta(btn.dataset.proposta);
+    else if (btn.dataset.cotacao) abrirCotacao(btn.dataset.cotacao);
     else if (btn.dataset.fechar) fecharVenda(btn.dataset.fechar);
     else if (btn.dataset.whatsapp) whatsappLead(btn.dataset.whatsapp);
     else if (btn.dataset.segmento) alternarSegmento(btn.dataset.segmento);
@@ -514,9 +517,18 @@ function whatsappLead(id) {
   window.open('https://wa.me/55' + numero + '?text=' + encodeURIComponent(msg));
 }
 
+// 11/11/2026 (Marcos): o botão Proposta gera os 2 documentos do cliente — proposta + cotação de materiais e serviços.
+// O navegador pode bloquear a 2ª janela no mesmo clique; o botão 📦 Cotação do cartão abre só ela.
 function abrirProposta(id) {
   const lead = _leads.find(l => l.id === id);
-  if (abrirPropostaLead(lead)) toast('Proposta aberta', 'info');
+  if (!abrirPropostaLead(lead)) return;
+  const ok = abrirCotacaoKit(lead);
+  toast(ok ? 'Proposta + cotação abertas' : 'Proposta aberta — use 📦 Cotação para a cotação', 'info');
+}
+
+function abrirCotacao(id) {
+  const lead = _leads.find(l => l.id === id);
+  if (abrirCotacaoKit(lead)) toast('Cotação aberta', 'info');
 }
 
 // [MF-AI-CHANGE 2026-07-31] "Novo Lead" via MODAL — prompt() NÃO funciona no Electron.
