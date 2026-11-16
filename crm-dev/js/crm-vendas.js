@@ -97,9 +97,9 @@ export function renderBlocoVendas(lead) {
   const status = String(lead.status || '').toLowerCase();
   let fuTxt = 'desligado para este lead (só roda nas colunas Proposta e Financiamento aprovado)';
   if (f.parado) fuTxt = '⏸️ pausado' + (f.motivoParada ? ` — ${esc(f.motivoParada)}` : '');
-  else if (f.respondeuEm) fuTxt = `💬 cliente respondeu depois da mensagem ${f.respondeuNaEtapa ?? '?'} — sequência parou`;
+  else if (f.respondeuEm) fuTxt = `💬 cliente respondeu depois da mensagem ${Number.isInteger(f.respondeuNaEtapa) ? f.respondeuNaEtapa : '?'} — sequência parou`;
   else if (f.concluido) fuTxt = '✅ sequência concluída';
-  else if (status === 'proposta' || status === 'financiamento') fuTxt = `🤖 ativo — ${(f.enviados || []).length} mensagem(ns) enviada(s)${f.ultimoEnvioEm ? ' · última ' + new Date(f.ultimoEnvioEm).toLocaleDateString('pt-BR') : ''}`;
+  else if (status === 'proposta' || status === 'financiamento') fuTxt = `🤖 ativo — ${Array.isArray(f.enviados) ? f.enviados.length : 0} mensagem(ns) enviada(s)${f.ultimoEnvioEm && !isNaN(Date.parse(f.ultimoEnvioEm)) ? ' · última ' + new Date(f.ultimoEnvioEm).toLocaleDateString('pt-BR') : ''}`;
   return `
 <hr class="modal-divider">
 <h3 style="margin:12px 0 6px;font-size:15px">🎯 Qualificação</h3>

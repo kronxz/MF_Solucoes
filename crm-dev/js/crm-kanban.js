@@ -196,7 +196,7 @@ function badgeFollowUp(lead, status) {
   if (status !== 'proposta' && status !== 'financiamento') return status === 'futuro' && lead.dataRetorno ? `<div style="font-size:11px;color:#a78bfa;margin-top:4px">🗓️ Retomar em ${escHtml(String(lead.dataRetorno).split('-').reverse().join('/'))}</div>` : '';
   if (f.parado) return '<div style="font-size:11px;color:#94a3b8;margin-top:4px">⏸️ Follow-up pausado</div>';
   if (f.concluido) return '<div style="font-size:11px;color:#94a3b8;margin-top:4px">✅ Follow-up concluído</div>';
-  return `<div style="font-size:11px;color:#38bdf8;margin-top:4px">🤖 Follow-up: ${(f.enviados || []).length} enviada(s)</div>`;
+  return `<div style="font-size:11px;color:#38bdf8;margin-top:4px">🤖 Follow-up: ${Array.isArray(f.enviados) ? f.enviados.length : 0} enviada(s)</div>`;
 }
 
 function tsLead(l) {
