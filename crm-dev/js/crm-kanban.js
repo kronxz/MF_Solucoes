@@ -32,12 +32,16 @@ function escHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-export const COLUNAS = ['novo', 'contato', 'visita', 'proposta', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
+// [16/11/2026] + negociacao / financiamento / futuro (follow-up automático — crm-vendas.js + bot-shared/followUp.js)
+export const COLUNAS = ['novo', 'contato', 'visita', 'proposta', 'negociacao', 'financiamento', 'futuro', 'fechado', 'instalacao', 'pos-venda', 'manutencao'];
 export const TITULOS = {
   novo: '🟡 Novos',
-  contato: '🔵 Contato',
+  contato: '🔵 Qualificado',
   visita: '📅 Visita',
-  proposta: '🟠 Proposta',
+  proposta: '🟠 Proposta enviada',
+  negociacao: '💬 Em negociação',
+  financiamento: '🏦 Financ. aprovado',
+  futuro: '🗓️ Fechamento futuro',
   fechado: '🟢 Fechado',
   instalacao: '🔧 Instalação',
   'pos-venda': '💼 Pós-Venda',
@@ -105,6 +109,10 @@ export function normalizarStatus(status) {
     agendamento: 'visita',
     'visita tecnica': 'visita',
     proposta: 'proposta',
+    negociacao: 'negociacao',
+    'em negociacao': 'negociacao',
+    financiamento: 'financiamento',
+    futuro: 'futuro',
     fechado: 'fechado',
     instalacao: 'instalacao',
     'pos-venda': 'pos-venda',
@@ -117,6 +125,7 @@ export function normalizarStatus(status) {
 
 function alertaCard(statusColuna, dias) {
   if (statusColuna === 'visita' && dias >= 2) return { texto: '📅 CONFIRMAR VISITA', cor: '#3b82f6' };
+  if (statusColuna === 'negociacao' && dias >= 2) return { texto: '💬 RESPONDER CLIENTE', cor: '#ef4444' };
   if (statusColuna === 'proposta' && dias >= 1) return { texto: '🔥 FECHAR HOJE', cor: '#ef4444' };
   if (statusColuna === 'instalacao' && dias >= 7) return { texto: '⚠️ ATRASO', cor: '#f59e0b' };
   if (statusColuna === 'pos-venda' && dias >= 3) return { texto: '⏰ FOLLOW-UP', cor: '#8b5cf6' };
@@ -164,6 +173,7 @@ function criarCardHtml(lead) {
     🏷️ Kit: <b style="color:#e879f9">${escHtml(kit)}</b>
   </div>
   <small>💡 Conta: R$ ${escHtml(valor)}</small>
+  ${badgeFollowUp(lead, status)}
   <div class="card-actions">
     <button type="button" class="btn-card btn-whatsapp" data-whatsapp="${lead.id}">💬 WhatsApp</button>
     <button type="button" class="btn-card btn-avancar" data-mover="${lead.id}">👉 Avançar</button>
@@ -177,6 +187,16 @@ function criarCardHtml(lead) {
     <button type="button" class="btn-card btn-segmento" data-segmento="${lead.id}">${isEletrica ? '☀️ p/ Solar' : '⚡ p/ Elétrica'}</button>
   </div>
 </div>`;
+}
+
+// [16/11/2026] Selo do follow-up automático no card
+function badgeFollowUp(lead, status) {
+  const f = lead.followup || {};
+  if (f.respondeuEm && status === 'negociacao') return '<div style="font-size:11px;color:#fbbf24;margin-top:4px">💬 Respondeu ao follow-up</div>';
+  if (status !== 'proposta' && status !== 'financiamento') return status === 'futuro' && lead.dataRetorno ? `<div style="font-size:11px;color:#a78bfa;margin-top:4px">🗓️ Retomar em ${escHtml(String(lead.dataRetorno).split('-').reverse().join('/'))}</div>` : '';
+  if (f.parado) return '<div style="font-size:11px;color:#94a3b8;margin-top:4px">⏸️ Follow-up pausado</div>';
+  if (f.concluido) return '<div style="font-size:11px;color:#94a3b8;margin-top:4px">✅ Follow-up concluído</div>';
+  return `<div style="font-size:11px;color:#38bdf8;margin-top:4px">🤖 Follow-up: ${(f.enviados || []).length} enviada(s)</div>`;
 }
 
 function tsLead(l) {
@@ -419,12 +439,17 @@ async function moverParaColuna(id, novoStatus) {
   const ref = doc(leadDb, col, id);
   const historico = lead.historico || [];
   historico.push({ acao: 'Movido para ' + novoStatus, data: new Date().toISOString() });
-  await updateDoc(ref, {
+  const upd = {
     status: novoStatus,
     historico,
     ultima_acao_nome: 'Movido para ' + novoStatus,
     lastAction: new Date().toISOString()
-  });
+  };
+  // [16/11/2026] Entrou em Proposta/Financiamento → (re)começa a sequência de follow-up a partir de AGORA.
+  if ((novoStatus === 'proposta' || novoStatus === 'financiamento') && normalizarStatus(lead.status) !== novoStatus) {
+    upd.followup = { inicioEm: new Date().toISOString(), trilha: novoStatus === 'financiamento' ? 'etapasFinanciamento' : 'etapas', etapa: 0 };
+  }
+  await updateDoc(ref, upd);
   toast(`Lead → ${novoStatus}`, 'success');
 }
 

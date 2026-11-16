@@ -323,8 +323,12 @@
         <select id="kanbanFiltroStatus" class="input-busca" aria-label="Filtrar status">
           <option value="">Todos os status</option>
           <option value="novo">🟡 Novos</option>
-          <option value="contato">🔵 Contato</option>
-          <option value="proposta">🟠 Proposta</option>
+          <option value="contato">🔵 Qualificado</option>
+          <option value="visita">📅 Visita</option>
+          <option value="proposta">🟠 Proposta enviada</option>
+          <option value="negociacao">💬 Em negociação</option>
+          <option value="financiamento">🏦 Financ. aprovado</option>
+          <option value="futuro">🗓️ Fechamento futuro</option>
           <option value="fechado">🟢 Fechado</option>
           <option value="instalacao">🔧 Instalação</option>
           <option value="pos-venda">💼 Pós-Venda</option>
@@ -337,13 +341,18 @@
           <option value="score">Maior score</option>
           <option value="nome">Nome A–Z</option>
         </select>
+        <button type="button" id="btnVendasAuto" class="input-busca" style="cursor:pointer;font-weight:700">🤖 Vendas automáticas</button>
       </div>
 
       <!-- Mobile Kanban Tabs -->
       <div class="mobile-kanban-tabs" id="kanbanTabs" role="tablist">
         <button class="kanban-btn active-tab" data-coluna="novo" role="tab" aria-selected="true">🟡 Novos</button>
-        <button class="kanban-btn" data-coluna="contato" role="tab" aria-selected="false">🔵 Contato</button>
+        <button class="kanban-btn" data-coluna="contato" role="tab" aria-selected="false">🔵 Qualif.</button>
+        <button class="kanban-btn" data-coluna="visita" role="tab" aria-selected="false">📅 Visita</button>
         <button class="kanban-btn" data-coluna="proposta" role="tab" aria-selected="false">🟠 Proposta</button>
+        <button class="kanban-btn" data-coluna="negociacao" role="tab" aria-selected="false">💬 Negoc.</button>
+        <button class="kanban-btn" data-coluna="financiamento" role="tab" aria-selected="false">🏦 Financ.</button>
+        <button class="kanban-btn" data-coluna="futuro" role="tab" aria-selected="false">🗓️ Futuro</button>
         <button class="kanban-btn" data-coluna="fechado" role="tab" aria-selected="false">🟢 Fechado</button>
         <button class="kanban-btn" data-coluna="instalacao" role="tab" aria-selected="false">🔧 Instal.</button>
         <button class="kanban-btn" data-coluna="pos-venda" role="tab" aria-selected="false">💼 Pós</button>
@@ -360,10 +369,22 @@
           <h2>🟡 Novos</h2>
         </div>
         <div class="column" id="contato" data-status="contato" ondragover="event.preventDefault()" role="tabpanel">
-          <h2>🔵 Contato</h2>
+          <h2>🔵 Qualificado</h2>
+        </div>
+        <div class="column" id="visita" data-status="visita" ondragover="event.preventDefault()" role="tabpanel">
+          <h2>📅 Visita</h2>
         </div>
         <div class="column" id="proposta" data-status="proposta" ondragover="event.preventDefault()" role="tabpanel">
-          <h2>🟠 Proposta</h2>
+          <h2>🟠 Proposta enviada</h2>
+        </div>
+        <div class="column" id="negociacao" data-status="negociacao" ondragover="event.preventDefault()" role="tabpanel">
+          <h2>💬 Em negociação</h2>
+        </div>
+        <div class="column" id="financiamento" data-status="financiamento" ondragover="event.preventDefault()" role="tabpanel">
+          <h2>🏦 Financ. aprovado</h2>
+        </div>
+        <div class="column" id="futuro" data-status="futuro" ondragover="event.preventDefault()" role="tabpanel">
+          <h2>🗓️ Fechamento futuro</h2>
         </div>
         <div class="column" id="fechado" data-status="fechado" ondragover="event.preventDefault()" role="tabpanel">
           <h2>🟢 Fechado</h2>

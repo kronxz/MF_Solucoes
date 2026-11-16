@@ -15,6 +15,7 @@ import { toast, escHtml } from './crm-utils.js';
 import { renderHtmlFinanciamento, renderHtmlKitResumo } from './crm-finance.js';
 import { iniciarEletrica, renderAbaEletrica } from './crm-eletrica.js';
 import { iniciarDocumentos, renderAbaDocumentos } from './crm-documentos.js';
+import { iniciarVendas, renderBlocoVendas } from './crm-vendas.js?v=20261116';
 import {
   renderTimelineMiniHtml,
   formatTempoRelativo,
@@ -36,6 +37,7 @@ export function iniciarDetails(db) {
   // Módulo ⚡ Elétrica (aba do modal) — lê o lead atual pela lista local
   iniciarEletrica(db, id => _leads.find(l => l.id === id));
   iniciarDocumentos(db, id => _leads.find(l => l.id === id));
+  iniciarVendas(db, () => _leads.find(l => l.id === _leadAtualId), () => _leads);
 
   // Fechar modal
   document.getElementById('btnFecharModal')?.addEventListener('click', fecharDetalhes);
@@ -304,7 +306,8 @@ async function preencherAbaLead(lead) {
 <p>🌞 <b>HSP:</b> ${esc(lead.hsp || '—')}</p>
 <p>💸 <b>Tarifa:</b> R$ ${esc(lead.tarifa || '—')}</p>
 <hr class="modal-divider">
-${renderHtmlKitResumo(lead, esc)}`;
+${renderHtmlKitResumo(lead, esc)}
+${renderBlocoVendas(lead)}`;
   }
 
   const obs = document.getElementById('detalhe-observacoes');
