@@ -7,6 +7,7 @@
 import { doc, getDoc, setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { toast, escHtml as esc } from './crm-utils.js';
 import { pedirEnvio } from './crm-whatsapp.js';
+import { BANCOS_PADRAO, definirTaxasBancos, taxasBancos, simularBancos, valorKit, resolverKitsLead } from './crm-finance.js';
 
 const PROIBIDO = /\bzer(ar|a|ou|ando)\b|conta\s+zerada|\bengenheir/i;
 
@@ -56,6 +57,7 @@ async function lerCfg() {
   if (_cfgVendas && _cfgFU) return;
   try { const s = await getDoc(doc(_db, 'crm_config', 'vendas')); _cfgVendas = s.exists() ? s.data() : { acrescimos: ACRESCIMOS_PADRAO }; }
   catch (_) { _cfgVendas = { acrescimos: ACRESCIMOS_PADRAO }; }
+  try { const s = await getDoc(doc(_db, 'crm_config', 'financiamento')); if (s.exists()) definirTaxasBancos(s.data()); } catch (_) {}
   try { const s = await getDoc(doc(_db, 'crm_config', 'followup')); _cfgFU = s.exists() ? s.data() : JSON.parse(JSON.stringify(FOLLOWUP_PADRAO)); }
   catch (_) { _cfgFU = JSON.parse(JSON.stringify(FOLLOWUP_PADRAO)); }
 }
@@ -197,6 +199,40 @@ async function onClickModal(e) {
         upd.ultima_acao_nome = 'Financiamento aprovado';
       }
       await atualizarLead(lead, upd, st === 'aprovado' ? 'Financiamento aprovado — lead na coluna 🏦' : 'Financiamento salvo');
+    } else if (acao === 'fin-mandar') {
+      const { kits } = resolverKitsLead(lead);
+      const tipo = (lead.kitTipo && kits[lead.kitTipo]) ? lead.kitTipo : (kits.recomendado ? 'recomendado' : Object.keys(kits)[0]);
+      const kit = kits[tipo];
+      const valor = num(lead.investimento) || valorKit(kit);
+      if (!valor) return toast('Sem valor de investimento — selecione um kit primeiro', 'error');
+      const porBanco = {};
+      simularBancos(valor).forEach(x => { if (!porBanco[x.banco] || x.parcela < porBanco[x.banco].parcela) porBanco[x.banco] = x; });
+      const top = Object.values(porBanco).sort((a, b) => a.parcela - b.parcela).slice(0, 3);
+      if (!top.length) return toast('Configure as taxas dos bancos em 🤖 Vendas automáticas', 'error');
+      const conta = num(lead.valor || lead.contaDeLuz);
+      const tx = taxasBancos();
+      const dataTx = tx.atualizadoEm ? new Date(tx.atualizadoEm).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+      const nome = String(lead.nome || '').trim().split(/\s+/)[0] || '';
+      const msg = [
+        `☀️ *Simulação de financiamento — MF Soluções Elétricas*${nome ? `\n${nome}, segue como fica:` : ''}`,
+        '',
+        `Sistema: ${lead.kwp || kit?.kwp ? String(lead.kwp || kit.kwp).replace('.', ',') + ' kWp · ' : ''}valor ${brl(valor)}`,
+        ...top.map(x => `🏦 ${x.banco}: ${x.prazo}x de *${brl(x.parcela)}*`),
+        '',
+        conta ? `Hoje sua conta é de ~${brl(conta)}. Com o sistema ela reduz até 95% (fica só a taxa mínima da Enel) — a parcela entra no lugar da conta.` : 'Com o sistema, a sua conta reduz até 95% (fica só a taxa mínima da Enel).',
+        '',
+        `_Simulação com as taxas de ${dataTx}. A parcela final depende da aprovação de crédito do banco._`,
+        'Quer que eu peça a aprovação para você?',
+      ].join('\n');
+      if (PROIBIDO.test(msg)) return toast('Texto bloqueado pela regra da marca', 'error');
+      if (confirm('Enviar esta simulação DIRETO pelo WhatsApp da MF?\n\nOK = o robô envia agora\nCancelar = abrir no seu WhatsApp\n\n' + msg)) {
+        const r = await pedirEnvio(lead, 'texto', msg);
+        if (r.status === 'enviado') toast('Simulação enviada pelo WhatsApp da MF', 'success');
+        else { toast('Robô não confirmou (' + (r.erro || r.status) + ') — abrindo no seu WhatsApp', 'info'); abrirWhatsTexto(lead, msg); }
+      } else abrirWhatsTexto(lead, msg);
+      const hist = Array.isArray(lead.historico) ? lead.historico.slice() : [];
+      hist.push({ acao: 'Simulação de financiamento enviada (' + top.map(x => x.banco + ' ' + x.prazo + 'x ' + x.parcela).join(' · ') + ')', data: new Date().toISOString() });
+      await atualizarLead(lead, { simulacaoEnviadaEm: new Date().toISOString(), historico: hist });
     } else if (acao === 'fin-pedir') {
       const txt = `Olá! Pode simular um financiamento de energia solar para um cliente meu?\n\nValor do sistema: ${lead.investimento ? brl(num(lead.investimento)) : '(informar)'}\nPotência: ${lead.kwp ? lead.kwp + ' kWp' : '(informar)'}\nCidade: ${lead.cidade || 'Maricá-RJ'}\n\nO CPF do cliente vai na mensagem seguinte. Obrigado!`;
       try { await navigator.clipboard.writeText(txt); } catch (_) {}
@@ -280,6 +316,15 @@ async function abrirPainel() {
     ${htmlEtapas(fu.etapas || [], 'etapas', stats)}
     <h3 style="font-size:15px;margin:14px 0 6px">🏦 Financiamento aprovado</h3>
     ${htmlEtapas(fu.etapasFinanciamento || [], 'etapasFinanciamento', stats)}
+    <h3 style="font-size:15px;margin:14px 0 6px">🏦 Taxas dos bancos (aba Financiamento)</h3>
+    <p style="font-size:12px;opacity:.75;margin:0 0 6px">Atualize com a taxa do mês que o fornecedor/banco te passa. Prazos separados por vírgula. A aba Financiamento e a simulação enviada ao cliente usam estes números.</p>
+    <div id="vendasBancosCfg">${(taxasBancos().bancos || BANCOS_PADRAO).map((b, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">
+      <input data-bco="${i}:nome" value="${esc(b.nome)}" maxlength="30" class="input-busca" style="flex:1;min-width:110px" placeholder="Banco">
+      <input data-bco="${i}:taxa" type="number" min="0" max="10" step="0.01" value="${num(b.taxaMes)}" class="input-busca" style="width:95px" title="% ao mês"> <span style="font-size:12px">% a.m.</span>
+      <input data-bco="${i}:prazos" value="${esc((b.prazos || []).join(', '))}" maxlength="40" class="input-busca" style="width:140px" placeholder="24, 36, 48">
+      <label style="font-size:12px;cursor:pointer"><input data-bco="${i}:ativo" type="checkbox"${b.ativo !== false ? ' checked' : ''}> ativo</label></div>`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input data-bco="novo:nome" maxlength="30" class="input-busca" style="flex:1;min-width:110px" placeholder="novo banco (opcional)"><input data-bco="novo:taxa" type="number" min="0" max="10" step="0.01" class="input-busca" style="width:95px" placeholder="%"> <span style="font-size:12px">% a.m.</span><input data-bco="novo:prazos" maxlength="40" class="input-busca" style="width:140px" placeholder="60, 72"><label style="font-size:12px"><input data-bco="novo:ativo" type="checkbox" checked> ativo</label></div>
+    </div>
     <h3 style="font-size:15px;margin:14px 0 6px">➕ Acréscimos fixos do pré-orçamento</h3>
     <div id="vendasAcresCfg">${(_cfgVendas.acrescimos || []).map((a, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><input data-acr="${i}:nome" value="${esc(a.nome)}" maxlength="40" class="input-busca" style="flex:1"><input data-acr="${i}:valor" type="number" min="0" step="50" value="${num(a.valor)}" class="input-busca" style="width:110px"></div>`).join('')}
       <div style="display:flex;gap:6px"><input data-acr="novo:nome" placeholder="novo acréscimo (opcional)" maxlength="40" class="input-busca" style="flex:1"><input data-acr="novo:valor" type="number" min="0" step="50" placeholder="R$" class="input-busca" style="width:110px"></div>
@@ -317,6 +362,12 @@ async function salvarPainel(e) {
   try {
     await setDoc(doc(_db, 'crm_config', 'followup'), { ...fu, atualizadoEm: new Date().toISOString() });
     await setDoc(doc(_db, 'crm_config', 'vendas'), { acrescimos: acres, atualizadoEm: new Date().toISOString() });
+    const bl = {};
+    document.querySelectorAll('#modalVendas [data-bco]').forEach(el => { const [i, c] = el.dataset.bco.split(':'); (bl[i] = bl[i] || {})[c] = el.type === 'checkbox' ? el.checked : el.value; });
+    const bancos = Object.values(bl).map(b => ({ nome: String(b.nome || '').trim().slice(0, 30), taxaMes: Math.max(0, Math.min(10, num(b.taxa))),
+      prazos: String(b.prazos || '').split(/[,; ]+/).map(n => Math.round(num(n))).filter(n => n >= 6 && n <= 120).slice(0, 8), ativo: b.ativo !== false }))
+      .filter(b => b.nome && b.taxaMes > 0 && b.prazos.length);
+    if (bancos.length) { const finCfg = { bancos, atualizadoEm: new Date().toISOString() }; await setDoc(doc(_db, 'crm_config', 'financiamento'), finCfg); definirTaxasBancos(finCfg); }
     _cfgFU = fu; _cfgVendas = { acrescimos: acres };
     toast(fu.ativo ? (fu.modoTeste ? 'Salvo — follow-up em MODO TESTE (prévias no Telegram)' : 'Salvo — follow-up LIGADO para clientes') : 'Salvo — follow-up desligado', 'success');
     document.getElementById('modalVendas').style.display = 'none';
