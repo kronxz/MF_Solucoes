@@ -399,9 +399,10 @@ async function preencherAbaInteligencia(lead) {
       ${row('👤','Digitou nome', digitouNome)}
       <hr style="border-color:rgba(255,255,255,0.08);margin:10px 0">
       <b style="color:#64748b;font-size:12px;letter-spacing:1px">ORIGEM</b>
-      ${row('📍','Origem', lead.utm_source || lead.referrer || 'direto')}
+      ${row('📍','Veio de', ({ meta: 'Anúncio no Facebook/Instagram (Meta)', facebook: 'Facebook', instagram: 'Instagram', google: 'Google', direto: 'Direto (digitou o site / sem anúncio)' })[String(lead.utm_source || 'direto').toLowerCase()] || lead.utm_source || lead.referrer || 'direto')}
       ${row('📢','Campanha', lead.utm_campaign || '—')}
-      ${row('🖥','Mídia', lead.utm_medium || '—')}
+      ${row('🖥','Tipo de tráfego', ({ cpc: 'Anúncio pago (cobrado por clique — CPC)', paid: 'Anúncio pago', organic: 'Orgânico (post, sem pagar)', social: 'Rede social (sem anúncio)', qr: 'QR Code', referral: 'Indicação/outro site' })[String(lead.utm_medium || '').toLowerCase()] || lead.utm_medium || '—')}
+      ${lead.utm_content ? row('🎬','Anúncio (criativo)', lead.utm_content) : ''}
       ${row('🔗','QR / Bairro', lead.bairroQR || '—')}
       ${row('🌐','Landing', lead.landingPage || '—')}
       ${row('↩','Referrer', lead.referrer || '—')}

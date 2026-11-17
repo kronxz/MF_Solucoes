@@ -25,17 +25,20 @@ function el(tag, attrs = {}, text) {
 
 function montarAba(box) {
   box.textContent = '';
-  const topo = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px' });
+  const topo = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px' });   // [17/11] layout compacto em PC e celular
   const info = el('span', { id: 'waInfo', style: 'font-size:12px;opacity:.8;flex:1' }, '');
-  const bPausar = el('button', { type: 'button', class: 'btn-card', 'data-wa': 'pausar' }, '⏸️ Pausar robô nesta conversa');
-  const bVoltar = el('button', { type: 'button', class: 'btn-card', 'data-wa': 'retomar' }, '▶️ Devolver ao robô');
+  const bPausar = el('button', { type: 'button', 'data-wa': 'pausar', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#334155;color:#e2e8f0' }, '⏸️ Pausar robô');
+  const bVoltar = el('button', { type: 'button', 'data-wa': 'retomar', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#334155;color:#e2e8f0' }, '▶️ Devolver ao robô');
   topo.append(info, bPausar, bVoltar);
-  const lista = el('div', { id: 'waLista', style: 'height:340px;overflow:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px' });
-  const form = el('div', { style: 'display:flex;gap:6px;margin-top:8px' });
-  const txt = el('textarea', { id: 'waTexto', rows: '2', maxlength: '1500', placeholder: 'Escreva para o cliente… (vai pelo WhatsApp da MF e pausa o robô nesta conversa)', class: 'notas-internas', style: 'flex:1' });
-  const bEnv = el('button', { type: 'button', class: 'btn-card', 'data-wa': 'enviar', style: 'background:#16a34a;color:#fff;border:none;min-width:90px' }, '📤 Enviar');
-  form.append(txt, bEnv);
-  const aviso = el('small', { style: 'opacity:.7;display:block;margin-top:4px' }, 'Fotos e áudios aparecem como "📎 mídia" — veja no celular. Envio sai em segundos; se o WhatsApp estiver desconectado, aparece ❌ com o motivo.');
+  const lista = el('div', { id: 'waLista', style: 'height:min(52vh,420px);min-height:220px;overflow:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px' });
+  const form = el('div', { style: 'display:flex;flex-direction:column;gap:6px;margin-top:8px' });
+  const txt = el('textarea', { id: 'waTexto', rows: '3', maxlength: '1500', placeholder: 'Escreva a mensagem para o cliente…', style: 'width:100%;box-sizing:border-box;min-height:72px;max-height:180px;resize:vertical;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e2e8f0;font-size:14px;line-height:1.4;font-family:inherit' });
+  const linha = el('div', { style: 'display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap' });
+  const dica = el('small', { style: 'opacity:.65;font-size:11px;flex:1;min-width:160px' }, 'Vai pelo WhatsApp da MF e pausa o robô nesta conversa. Ctrl+Enter envia.');
+  const bEnv = el('button', { type: 'button', 'data-wa': 'enviar', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#16a34a;color:#fff;padding:9px 18px;font-size:13px' }, '📤 Enviar');
+  linha.append(dica, bEnv);
+  form.append(txt, linha);
+  const aviso = el('small', { style: 'opacity:.55;display:block;margin-top:4px;font-size:11px' }, 'Fotos e áudios aparecem como "📎 mídia" — veja no celular.');
   box.append(topo, lista, form, aviso);
   txt.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); bEnv.click(); } });
 }

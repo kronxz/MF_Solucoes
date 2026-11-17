@@ -260,6 +260,49 @@ export function renderizarKanban(leads) {
   });
 
   if (window.matchMedia('(max-width: 768px)').matches) mostrarColunaMobile('novo');
+  instalarNavegacaoBoard();
+}
+
+// [17/11/2026] Setas ◀ ▶ para andar entre as colunas (PC: rola o quadro; celular: troca a coluna mostrada).
+// Também: arrastar o fundo do quadro com o mouse rola para os lados, e a roda do mouse com Shift.
+let _colMobile = 'novo';
+function instalarNavegacaoBoard() {
+  const board = document.getElementById('kanbanBoard');
+  if (!board || document.getElementById('kanbanNav')) return;
+  const nav = document.createElement('div');
+  nav.id = 'kanbanNav';
+  nav.style.cssText = 'position:fixed;right:18px;bottom:96px;z-index:900;display:flex;gap:8px';
+  const mk = (txt, dir, titulo) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = txt; b.title = titulo; b.setAttribute('aria-label', titulo);
+    b.style.cssText = 'width:46px;height:46px;border-radius:50%;border:1px solid #475569;background:rgba(15,23,42,.92);color:#e2e8f0;font-size:20px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45)';
+    b.addEventListener('click', () => andarBoard(dir));
+    return b;
+  };
+  nav.append(mk('◀', -1, 'Colunas da esquerda'), mk('▶', 1, 'Colunas da direita'));
+  document.body.appendChild(nav);
+  const pagina = board.closest('.page, section');
+  const sync = () => { nav.style.display = (!pagina || pagina.offsetParent !== null) ? 'flex' : 'none'; };
+  setInterval(sync, 800); sync();
+  // arrastar com o mouse (só no fundo, não nos cartões/botões)
+  let arr = null;
+  board.addEventListener('mousedown', (e) => { if (e.target.closest('.card, button, a, input, select, textarea')) return; arr = { x: e.clientX, s: board.scrollLeft }; board.style.cursor = 'grabbing'; });
+  window.addEventListener('mousemove', (e) => { if (arr) board.scrollLeft = arr.s - (e.clientX - arr.x); });
+  window.addEventListener('mouseup', () => { arr = null; board.style.cursor = ''; });
+}
+function andarBoard(dir) {
+  const board = document.getElementById('kanbanBoard');
+  if (!board) return;
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    const i = Math.max(0, COLUNAS.indexOf(_colMobile));
+    const prox = COLUNAS[Math.min(COLUNAS.length - 1, Math.max(0, i + dir))];
+    mostrarColunaMobile(prox);
+    document.querySelector(`#kanbanTabs [data-coluna="${prox}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    return;
+  }
+  const col = board.querySelector('.column');
+  const passo = col ? col.getBoundingClientRect().width + 8 : 260;
+  board.scrollBy({ left: dir * passo * 2, behavior: 'smooth' });
 }
 
 // Emergências que o Marcos já dispensou (X) — guardadas no navegador
@@ -641,6 +684,7 @@ async function salvarNovoLead(e) {
 
 // ─── MOBILE KANBAN TABS ───────────────────────────────────────
 export function mostrarColunaMobile(status) {
+  if (status && status !== 'todos') _colMobile = status;
   COLUNAS.forEach(col => {
     const el = document.getElementById(col);
     if (!el) return;
