@@ -574,6 +574,7 @@
       <!-- Tab Buttons -->
       <div class="modal-tabs" id="abasLead" role="tablist">
         <button class="modal-tab active" data-aba="abaLead" role="tab" aria-selected="true">📋 Lead</button>
+        <button class="modal-tab" data-aba="abaWhatsapp" role="tab" aria-selected="false">💬 WhatsApp</button>
         <button class="modal-tab" data-aba="abaInteligencia" role="tab" aria-selected="false">🧠 Inteligência</button>
         <button class="modal-tab" data-aba="abaFinanciamento" role="tab" aria-selected="false">💳 Financiamento</button>
         <button class="modal-tab" data-aba="abaEletrica" role="tab" aria-selected="false">⚡ Elétrica</button>
@@ -598,6 +599,13 @@
             <span id="detalhe-obs-status" class="notas-status"></span>
             <button type="button" id="btnPropostaModal" class="btn-card btn-proposta" style="margin-top:12px;width:100%">📄 Abrir Proposta PDF</button>
             <button type="button" id="btnCotacaoKitModal" class="btn-card" style="margin-top:8px;width:100%;background:#0090d4;color:#fff;border:none">📋 Cotação de Kit (lista de materiais)</button>
+          </div>
+        </div>
+
+        <!-- ABA WHATSAPP (17/11/2026) — conversa espelhada pelo robô + envio pelo número da MF -->
+        <div id="abaWhatsapp" class="aba-panel" role="tabpanel" style="display:none">
+          <div class="aba-scroll">
+            <div id="detalhe-whatsapp"></div>
           </div>
         </div>
 

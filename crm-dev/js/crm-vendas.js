@@ -6,6 +6,7 @@
 // Leis MF: nunca "zerar" a conta (até 95%); técnico CFT (nunca engenheiro); o robô não inventa preço.
 import { doc, getDoc, setDoc, updateDoc, deleteField } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { toast, escHtml as esc } from './crm-utils.js';
+import { pedirEnvio } from './crm-whatsapp.js';
 
 const PROIBIDO = /\bzer(ar|a|ou|ando)\b|conta\s+zerada|\bengenheir/i;
 
@@ -164,7 +165,12 @@ async function onClickModal(e) {
       const marcados = [...document.querySelectorAll('#vendasAcrescimos [data-acrescimo]:checked')].map(c => acres[+c.dataset.acrescimo]).filter(Boolean);
       const msg = montarPreOrcamento(lead, marcados);
       if (PROIBIDO.test(msg)) return toast('Texto bloqueado pela regra da marca', 'error');
-      abrirWhatsTexto(lead, msg);
+      // [17/11] Envia direto pelo WhatsApp da MF (robô) ou, se preferir, abre no seu WhatsApp.
+      if (confirm('Enviar este pré-orçamento DIRETO pelo WhatsApp da MF?\n\nOK = o robô envia agora\nCancelar = abrir no seu WhatsApp\n\n' + msg)) {
+        const r = await pedirEnvio(lead, 'texto', msg);
+        if (r.status === 'enviado') toast('Pré-orçamento enviado pelo WhatsApp da MF', 'success');
+        else { toast('Robô não confirmou (' + (r.erro || r.status) + ') — abrindo no seu WhatsApp', 'info'); abrirWhatsTexto(lead, msg); }
+      } else abrirWhatsTexto(lead, msg);
       const hist = Array.isArray(lead.historico) ? lead.historico.slice() : [];
       hist.push({ acao: 'Pré-orçamento enviado pelo WhatsApp', data: new Date().toISOString() });
       await atualizarLead(lead, { preOrcamentoEm: new Date().toISOString(), historico: hist, ultima_acao_nome: 'Pré-orçamento enviado' });

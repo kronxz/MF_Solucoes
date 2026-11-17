@@ -127,6 +127,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── landing_engajamento (06/11/2026): o "curioso" — 1 doc por sessão com tempo/rolagem/cliques.
+    //    Coleção SEPARADA de landing_visits para não dobrar a contagem de visitas (QR/métricas/relatórios).
+    match /landing_engajamento/{docId} {
+      allow create: if
+        request.resource.data.sessionId is string &&
+        request.resource.data.sessionId.size() >= 5 &&
+        request.resource.data.sessionId.size() <= 60 &&
+        request.resource.data.keys().size() <= 14 &&
+        request.resource.data.tempoSeg is int &&
+        request.resource.data.tempoSeg >= 0 && request.resource.data.tempoSeg <= 86400 &&
+        request.resource.data.scrollMax is int &&
+        request.resource.data.scrollMax >= 0 && request.resource.data.scrollMax <= 100;
+      allow read, list: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // ── Controle Remoto / Heartbeat: instâncias de bots e comandos ──
     match /bot_instances/{docId} {
       allow read, list: if isAdmin();
@@ -170,6 +186,27 @@ service cloud.firestore {
     // ── ads_spend: lançamento manual de investimento em campanhas (Analytics Central) ──
     match /ads_spend/{docId} {
       allow read, write, delete: if isAdmin();
+    }
+
+    // ── WhatsApp dentro do CRM (17/11/2026) — o robô (Admin SDK, no VPS) grava; o CRM só lê e pede envios ──
+    match /wa_conversas/{tel} {
+      allow read: if isAdmin();
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['naoLidas', 'lidoEm']);
+      allow create, delete: if false;
+      match /mensagens/{msgId} {
+        allow read: if isAdmin();
+        allow write: if false;
+      }
+    }
+    match /wa_outbox/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['telefone', 'texto', 'tipo', 'status', 'criadoEm', 'por', 'leadId']) &&
+        request.resource.data.status == 'pendente' &&
+        request.resource.data.telefone is string && request.resource.data.telefone.size() <= 20 &&
+        request.resource.data.tipo in ['texto', 'pausar', 'retomar'] &&
+        (!('texto' in request.resource.data) || (request.resource.data.texto is string && request.resource.data.texto.size() <= 1500));
+      allow update, delete: if false;
     }
 
     // ── Todas as outras coleções: acesso zero via cliente ──
