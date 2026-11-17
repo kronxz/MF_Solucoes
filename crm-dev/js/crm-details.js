@@ -448,6 +448,15 @@ function ativarModoEdicao(lead) {
   ${campoEdit('📞', 'Telefone', 'edit-telefone', 'text', lead.telefone)}
   ${campoEdit('📍', 'Endereço / Cidade', 'edit-endereco', 'text', lead.endereco)}
   ${campoEdit('🏢', 'Concessionária', 'edit-concessionaria', 'text', lead.concessionaria || lead.distribuidora)}
+  <label style="${EDIT_LABEL_STYLE}">🔌 Medidor (ligação)
+    <select id="edit-ligacao" style="${EDIT_INPUT_STYLE}"><option value=""${lead.ligacao === '' ? ' selected' : ''}>—</option><option value="monofasico"${lead.ligacao === 'monofasico' ? ' selected' : ''}>Monofásico</option><option value="bifasico"${lead.ligacao === 'bifasico' ? ' selected' : ''}>Bifásico</option><option value="trifasico"${lead.ligacao === 'trifasico' ? ' selected' : ''}>Trifásico</option></select>
+  </label>
+  <label style="${EDIT_LABEL_STYLE}">🏠 Tipo de telhado
+    <select id="edit-telhado" style="${EDIT_INPUT_STYLE}"><option value=""${(lead.telhado || (lead.qualificacao || {}).telhado || '') === '' ? ' selected' : ''}>—</option><option value="ceramica"${(lead.telhado || (lead.qualificacao || {}).telhado || '') === 'ceramica' ? ' selected' : ''}>Cerâmica / colonial</option><option value="fibrocimento"${(lead.telhado || (lead.qualificacao || {}).telhado || '') === 'fibrocimento' ? ' selected' : ''}>Fibrocimento</option><option value="metalico"${(lead.telhado || (lead.qualificacao || {}).telhado || '') === 'metalico' ? ' selected' : ''}>Metálico</option><option value="laje"${(lead.telhado || (lead.qualificacao || {}).telhado || '') === 'laje' ? ' selected' : ''}>Laje</option><option value="solo"${(lead.telhado || (lead.qualificacao || {}).telhado || '') === 'solo' ? ' selected' : ''}>Solo</option></select>
+  </label>
+  <label style="${EDIT_LABEL_STYLE}">🏢 Andares da casa
+    <select id="edit-andares" style="${EDIT_INPUT_STYLE}"><option value=""${lead.andares === '' ? ' selected' : ''}>—</option><option value="1"${lead.andares === '1' ? ' selected' : ''}>1 andar (térrea)</option><option value="2"${lead.andares === '2' ? ' selected' : ''}>2 andares</option><option value="3+"${lead.andares === '3+' ? ' selected' : ''}>3 ou mais andares</option></select>
+  </label>
   ${campoEdit('💡', 'Conta de Luz (R$)', 'edit-valor', 'number', lead.valor, 'min="0" step="0.01"')}
   ${campoEdit('⚡', 'Consumo (kWh/mês)', 'edit-consumo', 'number', lead.consumo, 'min="0"')}
   <label style="${EDIT_LABEL_STYLE}">⚡ Potência da placa (Wp)
@@ -514,7 +523,8 @@ async function salvarEdicaoLead() {
 
   const toNum = s => s !== '' ? Number(s) : undefined;
 
-  const updates = { nome, telefone, endereco, concessionaria, editadoEm: new Date().toISOString() };
+  const updates = { nome, telefone, endereco, concessionaria, editadoEm: new Date().toISOString(),
+    ligacao: get('edit-ligacao'), telhado: get('edit-telhado'), andares: get('edit-andares') };   // [17/11/2026]
   const valor = toNum(valorStr);
   const consumo = toNum(consumoStr);
   const kwp = toNum(kwpStr);

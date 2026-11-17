@@ -588,6 +588,9 @@ async function salvarNovoLead(e) {
   const valor        = (document.getElementById('nl-valor')?.value || '').trim();
   const investimento = (document.getElementById('nl-investimento')?.value || '').trim();
   const kwp          = (document.getElementById('nl-kwp')?.value || '').trim();
+  const ligacao      = document.getElementById('nl-ligacao')?.value || '';
+  const telhado      = document.getElementById('nl-telhado')?.value || '';
+  const andares      = document.getElementById('nl-andares')?.value || '';
 
   const utm = JSON.parse(localStorage.getItem('utm') || '{}');
   const kit = JSON.parse(localStorage.getItem('kitSelecionado') || '{}');
@@ -604,6 +607,7 @@ async function salvarNovoLead(e) {
   try {
     await addDoc(collection(_db, 'leads'), {
       nome, telefone, telefoneDigitos: tel, valor,
+      ligacao, telhado, andares,   // [17/11/2026] dados técnicos p/ precificar
       sistema: kit?.sistema || '-',
       investimento: kit?.investimento || investimento || 0,
       geracao: kit?.geracao || 0,

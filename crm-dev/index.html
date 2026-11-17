@@ -552,6 +552,16 @@
         <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">Potência (kWp) — opcional
           <input id="nl-kwp" type="text" inputmode="decimal" class="input-busca" placeholder="Opcional" style="margin:0;">
         </label>
+        <!-- [17/11/2026] dados técnicos para precificar -->
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">🔌 Medidor (ligação)
+          <select id="nl-ligacao" class="input-busca" style="margin:0;"><option value="">—</option><option value="monofasico">Monofásico</option><option value="bifasico">Bifásico</option><option value="trifasico">Trifásico</option></select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">🏠 Tipo de telhado
+          <select id="nl-telhado" class="input-busca" style="margin:0;"><option value="">—</option><option value="ceramica">Cerâmica / colonial</option><option value="fibrocimento">Fibrocimento</option><option value="metalico">Metálico</option><option value="laje">Laje</option><option value="solo">Solo</option></select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;">🏢 Andares da casa
+          <select id="nl-andares" class="input-busca" style="margin:0;"><option value="">—</option><option value="1">1 andar (térrea)</option><option value="2">2 andares</option><option value="3+">3 ou mais andares</option></select>
+        </label>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
           <button type="button" id="btn-cancelar-novo-lead-2" onclick="document.getElementById('modalNovoLead').classList.remove('ativo');document.getElementById('modalNovoLead').setAttribute('aria-hidden','true');" style="padding:10px 18px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-weight:600;cursor:pointer;">Cancelar</button>
           <button type="submit" style="padding:10px 18px;border:none;background:#f59e0b;color:#1a1a2e;border-radius:8px;font-weight:700;cursor:pointer;">Salvar lead</button>

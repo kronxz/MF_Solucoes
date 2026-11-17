@@ -40,7 +40,9 @@ export const FOLLOWUP_PADRAO = {
   ],
 };
 
-const ROT_TELHADO = { ceramica: 'cerâmica/colonial', fibrocimento: 'fibrocimento (Eternit)', metalico: 'metálico', laje: 'laje', outro: 'outro' };
+const ROT_TELHADO = { ceramica: 'cerâmica/colonial', colonial: 'cerâmica/colonial', fibrocimento: 'fibrocimento (Eternit)', metalico: 'metálico', laje: 'laje', solo: 'solo', outro: 'outro' };
+const ROT_LIGACAO = { monofasico: 'monofásico', bifasico: 'bifásico', trifasico: 'trifásico' };
+const ROT_ANDARES = { '1': '1 andar (térrea)', '2': '2 andares', '3+': '3 ou mais andares' };
 const ROT_PAG = { vista: 'à vista', financiado: 'financiado', indefinido: 'ainda não sei' };
 const ROT_FIN = { '': '—', nao: 'não pediu', pedido: 'simulação pedida', aprovado: 'aprovado ✅', negado: 'negado ❌' };
 
@@ -70,6 +72,7 @@ export function montarPreOrcamento(lead, acrescimosEscolhidos = []) {
     '',
     `📍 Local: ${local}`,
     `🏠 Telhado: ${telhado}`,
+    lead.ligacao ? `🔌 Medidor: ${ROT_LIGACAO[lead.ligacao]}` : null,
     lead.geracao ? `⚡ Geração estimada: ~${Math.round(num(lead.geracao))} kWh/mês` : null,
     lead.placas ? `🔆 Módulos: ${lead.placas} placas${lead.kwp ? ` (${String(lead.kwp).replace('.', ',')} kWp)` : ''}` : null,
     `🔌 Inversor: ${lead.inversor ? lead.inversor : 'on-grid homologado na Enel (marca confirmada na visita)'}`,
@@ -107,7 +110,8 @@ export function renderBlocoVendas(lead) {
   return `
 <hr class="modal-divider">
 <h3 style="margin:12px 0 6px;font-size:15px">🎯 Qualificação</h3>
-<p>🏠 <b>Telhado:</b> ${esc(ROT_TELHADO[lead.telhado || q.telhado] || lead.telhado || q.telhado || '—')} · 📍 <b>Bairro:</b> ${esc(lead.bairro || q.bairro || '—')} · 💳 <b>Pagamento:</b> ${esc(ROT_PAG[lead.pagamento || q.pagamento] || '—')}</p>
+<p>🔌 <b>Medidor:</b> ${esc(ROT_LIGACAO[lead.ligacao] || '—')} · 🏠 <b>Telhado:</b> ${esc(ROT_TELHADO[lead.telhado || q.telhado] || lead.telhado || q.telhado || '—')} · 🏢 <b>Andares:</b> ${esc(ROT_ANDARES[lead.andares] || '—')}</p>
+<p>📍 <b>Bairro:</b> ${esc(lead.bairro || q.bairro || '—')} · 💳 <b>Pagamento:</b> ${esc(ROT_PAG[lead.pagamento || q.pagamento] || '—')}${(!lead.ligacao || !(lead.telhado || q.telhado) || !lead.andares) ? ' · <span style="color:#f59e0b">⚠️ complete em ✏️ Editar dados para precificar</span>' : ''}</p>
 
 <h3 style="margin:14px 0 6px;font-size:15px">📲 Pré-orçamento rápido (WhatsApp)</h3>
 <div id="vendasAcrescimos" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px;font-size:13px">

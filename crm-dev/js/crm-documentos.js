@@ -80,8 +80,8 @@ export function renderAbaDocumentos(lead) {
       ${campo('🧩 Nº de placas', 'doc-placas', p.placas ?? lead.placas ?? '', 'inputmode="numeric"')}
       ${campo('⚡ Inversor (marca / modelo)', 'doc-inversor', p.inversor ?? lead.inversor ?? 'Deye SUN-5K-G05P1 — 5 kW — 2 MPPT — 220 V')}
       ${campo('💰 Valor de venda (R$)', 'doc-preco', p.preco ?? lead.investimento ?? '', 'inputmode="decimal"')}
-      ${select('🏠 Telhado', 'doc-telhado', p.telhado || 'fibrocimento', [['fibrocimento', 'Fibrocimento'], ['colonial', 'Colonial (cerâmica)'], ['metalico', 'Metálico / zipado'], ['laje', 'Laje'], ['solo', 'Solo']])}
-      ${select('🔌 Ligação', 'doc-ligacao', p.ligacao || 'bifasico', [['monofasico', 'Monofásico'], ['bifasico', 'Bifásico'], ['trifasico', 'Trifásico']])}
+      ${select('🏠 Telhado', 'doc-telhado', p.telhado || ({ ceramica: 'colonial' }[lead.telhado] || lead.telhado) || 'fibrocimento', [['fibrocimento', 'Fibrocimento'], ['colonial', 'Colonial (cerâmica)'], ['metalico', 'Metálico / zipado'], ['laje', 'Laje'], ['solo', 'Solo']])}
+      ${select('🔌 Ligação', 'doc-ligacao', p.ligacao || lead.ligacao || 'bifasico', [['monofasico', 'Monofásico'], ['bifasico', 'Bifásico'], ['trifasico', 'Trifásico']])}
     </div>
     <div id="doc-resumo" style="margin:10px 0;padding:10px;border-radius:8px;background:#0b1220;border:1px solid #1e293b;font-size:13px;line-height:1.6"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
