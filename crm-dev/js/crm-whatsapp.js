@@ -10,8 +10,8 @@ let _db = null, _getLead = () => null, _unsubMsgs = null, _unsubConv = null, _ch
 
 export function chaveDe(tel) {
   const d = String(tel || '').replace(/\D/g, '');
-  const k = d.slice(-11);
-  return /^\d{2}9\d{8}$/.test(k) ? k : '';
+  if (/^55\d{2}9\d{8}$/.test(d)) return d.slice(2);
+  return /^\d{2}9\d{8}$/.test(d) ? d : '';   // só celular BR — nunca corta número estrangeiro
 }
 
 const ROTULO = { cliente: '👤 Cliente', robo: '🤖 Robô', marcos: '📱 Você (celular)', crm: '💻 Você (CRM)' };
