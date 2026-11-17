@@ -15,6 +15,9 @@ export const ACRESCIMOS_PADRAO = [
   { nome: 'Estrutura elevada / laje', valor: 400 },
 ];
 
+export const BOASVINDAS_PADRAO = { ativo: false, modoTeste: true, aprovado: false,
+  texto: 'Oi, {nome}! Aqui é o Marcos, técnico responsável da MF Soluções Elétricas ☀️ Recebi o seu pedido de simulação pelo site e já estou montando o seu orçamento. Para ficar certinho, me manda por aqui uma foto da sua conta de luz e me diz o bairro do imóvel. Qualquer dúvida, é só falar!' };
+
 export const FOLLOWUP_PADRAO = {
   ativo: false, modoTeste: true, horaIni: 9, horaFim: 19, maxPorRodada: 5,
   etapas: [
@@ -235,6 +238,7 @@ function htmlEtapas(lista, trilha, stats) {
 async function abrirPainel() {
   await lerCfg();
   const fu = _cfgFU;
+  const bv = Object.assign({}, BOASVINDAS_PADRAO, fu.boasVindas || {});
   const stats = estatisticas(_getLeads());
   let m = document.getElementById('modalVendas');
   if (!m) {
@@ -253,6 +257,14 @@ async function abrirPainel() {
       <label style="cursor:pointer;margin-right:16px"><input id="fuTeste" type="checkbox"${fu.modoTeste !== false ? ' checked' : ''}> <b>Modo teste</b> (manda a prévia só para o seu Telegram)</label>
       Horário: <input id="fuIni" type="number" min="6" max="20" value="${num(fu.horaIni) || 9}" style="width:52px" class="input-busca">h às <input id="fuFim" type="number" min="8" max="22" value="${num(fu.horaFim) || 19}" style="width:52px" class="input-busca">h (sábado só de manhã; domingo nunca)
       <p style="margin:8px 0 0;opacity:.8">${ativosFU} lead(s) hoje nas colunas Proposta/Financiamento. Só mensagens <b>Aprovadas</b> são enviadas; quando o cliente responde, a sequência para, o lead vai para 💬 Em negociação e você é avisado no Telegram. "{nome}" vira o primeiro nome do cliente.</p>
+    </div>
+    <h3 style="font-size:15px;margin:6px 0">👋 Boas-vindas a quem preenche o formulário do site</h3>
+    <div class="glass-card" style="padding:10px;margin-bottom:12px;font-size:13px">
+      <label style="cursor:pointer;margin-right:14px"><input id="bvAtivo" type="checkbox"${bv.ativo ? ' checked' : ''}> <b>Ligado</b></label>
+      <label style="cursor:pointer;margin-right:14px"><input id="bvTeste" type="checkbox"${bv.modoTeste !== false ? ' checked' : ''}> <b>Modo teste</b> (prévia só no seu Telegram)</label>
+      <label style="cursor:pointer"><input id="bvAprovado" type="checkbox"${bv.aprovado ? ' checked' : ''}> <b>Aprovado</b></label>
+      <p style="margin:6px 0;opacity:.8">1 mensagem, ~2 min depois do envio do formulário (só quem enviou com o aviso de consentimento; nunca o "parcial"). Se o cliente já escreveu no WhatsApp, não manda. Das 8h às 21h — fora disso, sai às 8h.</p>
+      <textarea id="bvTexto" rows="4" maxlength="700" style="width:100%" class="notas-internas">${esc(bv.texto || '')}</textarea>
     </div>
     <h3 style="font-size:15px;margin:6px 0">🟠 Depois da proposta (para quem não responde)</h3>
     ${htmlEtapas(fu.etapas || [], 'etapas', stats)}
@@ -274,6 +286,9 @@ async function salvarPainel(e) {
   fu.modoTeste = document.getElementById('fuTeste').checked;
   fu.horaIni = Math.min(20, Math.max(6, num(document.getElementById('fuIni').value) || 9));
   fu.horaFim = Math.min(22, Math.max(fu.horaIni + 1, num(document.getElementById('fuFim').value) || 19));
+  fu.boasVindas = { ativo: document.getElementById('bvAtivo').checked, modoTeste: document.getElementById('bvTeste').checked,
+    aprovado: document.getElementById('bvAprovado').checked, texto: document.getElementById('bvTexto').value.trim().slice(0, 700) };
+  if (PROIBIDO.test(fu.boasVindas.texto)) return toast('Regra da marca: tire "zerar"/"engenheiro" da mensagem de boas-vindas', 'error');
   const erros = [];
   document.querySelectorAll('#modalVendas [data-fu]').forEach(el => {
     const [trilha, i, campo] = el.dataset.fu.split(':');
