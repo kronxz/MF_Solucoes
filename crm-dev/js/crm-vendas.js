@@ -146,7 +146,16 @@ export function renderBlocoVendas(lead) {
 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
   <input id="vendasRetorno" type="date" class="input-busca" value="${esc(lead.dataRetorno || '')}">
   <button type="button" data-vendas="futuro" class="btn-card">🗓️ Mover p/ Fechamento futuro e lembrar nesta data</button>
-</div>`;
+</div>
+
+<h3 style="margin:14px 0 6px;font-size:15px">🏗️ Homologação</h3>
+${lead.homologacao && lead.homologacao.pasta
+  ? `<div style="font-size:13px">✅ Homologação iniciada no app (projeto <b>${esc(lead.homologacao.pasta)}</b>).</div>`
+  : lead.homologacaoSolicitada
+    ? `<div style="font-size:13px">⏳ Aguardando no app MF Control Center → <b>🏠 Nova Homologação</b> (aparece no topo da lista).</div>
+       <button type="button" data-vendas="homolog-cancelar" class="btn-card">Desfazer</button>`
+    : `<button type="button" data-vendas="homolog-iniciar" class="btn-card">🏗️ Iniciar homologação</button>
+       <small style="opacity:.7;display:block">O cliente aparece no app (🏠 Nova Homologação) com nome, telefone, endereço e ligação já preenchidos.</small>`}`;
 }
 
 async function atualizarLead(lead, upd, msg) {
@@ -238,6 +247,10 @@ async function onClickModal(e) {
       try { await navigator.clipboard.writeText(txt); } catch (_) {}
       toast('Texto copiado — cole na conversa com o vendedor da Belenus', 'info');
       if (!lead.financiamento || !lead.financiamento.status) await atualizarLead(lead, { financiamento: { status: 'pedido', atualizadoEm: new Date().toISOString() } });
+    } else if (acao === 'homolog-iniciar') {
+      await atualizarLead(lead, { homologacaoSolicitada: true, homologacaoSolicitadaEm: new Date().toISOString(), ultima_acao_nome: 'Homologação solicitada' }, 'Pronto! Abra o app → 🏠 Nova Homologação');
+    } else if (acao === 'homolog-cancelar') {
+      await atualizarLead(lead, { homologacaoSolicitada: false }, 'Pedido de homologação desfeito');
     } else if (acao === 'futuro') {
       const data = document.getElementById('vendasRetorno').value;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return toast('Escolha a data de retorno', 'error');
