@@ -1,5 +1,11 @@
 # 📋 Changelog - CRM MF Soluções
 
+## 2026-11-19 — correção do telhado na cotação (ainda não publicada)
+- A cotação agora usa o telhado atual do lead, normaliza aliases como `Cerâmica / colonial`, propaga essa escolha no payload e no documento e não assume fibrocimento quando o dado falta.
+- Alterados `crm-dev/js/crm-telhado.mjs` (normalização/resolução), `crm-dev/js/crm-cotacao-kit.js` (payload), `crm-dev/js/crm-details.js` (sincronização da edição), `crm-dev/js/crm-documentos.js` (prioridade do valor atual) e `crm-dev/cotacao-kit.html` (render/fallback). Criado `crm-dev/js/crm-telhado.test.mjs`.
+- Validação local: **3/3 testes** do telhado passaram; teste de interface local passou com telhado colonial e sem telhado confirmado.
+- **Pendente:** não houve deploy Firebase. Antes de publicar, cumprir `docs-dev/RETOMADA_COTACAO_TELHADO_2026-11-19.md`, validar no preview/DEV e só então publicar no hosting correto com autorização do responsável.
+
 ## [1.0.0] - 22/05/2026
 
 ### 🚀 Adicionado

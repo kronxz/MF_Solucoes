@@ -42,6 +42,7 @@
     <button class="btn-print" onclick="window.print()">🖨️ Salvar / Imprimir PDF</button>
     <label>🏠 Telhado:
       <select id="telhado" onchange="render()">
+        <option value="pendente">A confirmar na visita</option>
         <option value="fibrocimento">Fibrocimento</option>
         <option value="colonial">Telha colonial (cerâmica)</option>
         <option value="metalico">Metálico / zipado</option>
@@ -125,6 +126,17 @@ const P = Number(D.potenciaPlaca) || 550;
 const KWP = Number(D.kwp) || (N*P/1000);
 const inversorKw = [5, 6.6, 7.5, 10].find(k => k >= KWP*0.85) || 10;
 
+function normalizarTelhado(valor){
+  const s = String(valor ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (!s) return '';
+  if (s.includes('colonial') || s.includes('ceramica')) return 'colonial';
+  if (s.includes('fibrocimento') || s.includes('eternit')) return 'fibrocimento';
+  if (s.includes('metal') || s.includes('zinco') || s.includes('zipad') || s.includes('aco')) return 'metalico';
+  if (s.includes('laje')) return 'laje';
+  if (s.includes('solo')) return 'solo';
+  return '';
+}
+
 function fixacao(tipo){
   const comum = [
     ['Perfil de fixação de módulo — alumínio', Math.max(2, Math.ceil(N*1.1)) + ' pç'],
@@ -140,7 +152,8 @@ function fixacao(tipo){
     laje:         [['Estrutura triangular para laje (base + suporte inclinado)', Math.ceil(N/2) + ' cj']],
     solo:         [['Estrutura de solo (perfis, bases e travamentos)', 'conforme projeto']]
   };
-  return (esp[tipo] || esp.fibrocimento).concat(comum);
+  const estrutura = esp[tipo] || [['Sistema de fixação compatível com o telhado — confirmar em visita', 'A confirmar']];
+  return estrutura.concat(comum);
 }
 
 // escape HTML — evita XSS ao interpolar dados do cliente no innerHTML
@@ -208,8 +221,11 @@ function render(){
   document.title = D.cliente ? ('Cotação de Materiais e Serviços — ' + D.cliente) : 'Cotação — MF Soluções';
 }
 
-// telhado: o escolhido na aba 📂 Documentos do lead; senão fibrocimento (o mais comum em Maricá)
-try { const t = localStorage.getItem('cotacaoTelhado'); if (t && document.querySelector('#telhado option[value="' + t + '"]')) document.getElementById('telhado').value = t; } catch (_) {}
+// Prioriza o valor carregado com esta cotação; mantém localStorage como fallback legado.
+try {
+  const t = normalizarTelhado(D.telhado) || normalizarTelhado(localStorage.getItem('cotacaoTelhado')) || 'pendente';
+  document.getElementById('telhado').value = t;
+} catch (_) { document.getElementById('telhado').value = 'pendente'; }
 render();
 </script>
 </body>

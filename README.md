@@ -1,5 +1,7 @@
 # ☀️ Simulador Solar - MF Soluções Elétricas
 
+**🏠 [← Voltar ao Índice](../../INDICE-CONHECIMENTO.md)** · [[INDICE-CONHECIMENTO]] · [[06 - SISTEMA/README]]
+
 Simulador inteligente de sistemas fotovoltaicos desenvolvido para geração de propostas comerciais rápidas, precisas e profissionais.
 
 🔗 Acesse o simulador:

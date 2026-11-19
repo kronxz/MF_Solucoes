@@ -1,5 +1,16 @@
 # ✅ Checklist de Validação - CRM MF Soluções
 
+## Retomada 19/11/2026 — telhado na cotação
+
+- [x] Testes unitários de normalização/resolução do telhado: `node --test crm-dev/js/crm-telhado.test.mjs` (**3/3**).
+- [x] Teste de interface local: escolha Cerâmica/colonial chega à cotação e a opção sem confirmação não vira fibrocimento.
+- [ ] Abrir um lead real de teste com `telhado = Cerâmica / colonial`, editar/salvar, emitir cotação e verificar “Telhado: Cerâmica” e estrutura de fixação cerâmica.
+- [ ] Testar campo vazio/“A confirmar”; a cotação deve pedir confirmação em visita e não usar estrutura ou rótulo de fibrocimento por omissão.
+- [ ] Revisar diff/arquivos e testar no preview ou projeto Firebase DEV `mf-solucoes-dev`.
+- [ ] Após aprovação explícita para publicar, fazer deploy somente do hosting CRM e confirmar a URL/versão publicada. Não publicar rules/indexes (esta correção não os altera).
+
+Detalhes do que mudou, testes e ordem de publicação: `RETOMADA_COTACAO_TELHADO_2026-11-19.md`.
+
 ## 🎯 Objetivo
 
 Validar todas as funcionalidades do CRM antes do deploy em produção.

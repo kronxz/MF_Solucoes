@@ -526,6 +526,10 @@ async function salvarEdicaoLead() {
 
   const updates = { nome, telefone, endereco, concessionaria, editadoEm: new Date().toISOString(),
     ligacao: get('edit-ligacao'), telhado: get('edit-telhado'), andares: get('edit-andares') };   // [17/11/2026]
+  // Mantenha o campo usado no formulário de documentos sincronizado com a edição do lead.
+  if (leadAtual?.projeto && typeof leadAtual.projeto === 'object' && !Array.isArray(leadAtual.projeto)) {
+    updates.projeto = { ...leadAtual.projeto, telhado: updates.telhado };
+  }
   const valor = toNum(valorStr);
   const consumo = toNum(consumoStr);
   const kwp = toNum(kwpStr);

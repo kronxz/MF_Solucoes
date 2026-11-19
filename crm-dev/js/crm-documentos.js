@@ -14,6 +14,7 @@
 import { doc, updateDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { abrirProposta } from './crm-proposal.js';
 import { abrirCotacaoKit } from './crm-cotacao-kit.js';
+import { telhadoDoLead } from './crm-telhado.mjs';
 import { toast, escHtml as esc } from './crm-utils.js';
 
 export const GERACAO_KWH_KWP_MES = 96.8;
@@ -80,7 +81,7 @@ export function renderAbaDocumentos(lead) {
       ${campo('🧩 Nº de placas', 'doc-placas', p.placas ?? lead.placas ?? '', 'inputmode="numeric"')}
       ${campo('⚡ Inversor (marca / modelo)', 'doc-inversor', p.inversor ?? lead.inversor ?? 'Deye SUN-5K-G05P1 — 5 kW — 2 MPPT — 220 V')}
       ${campo('💰 Valor de venda (R$)', 'doc-preco', p.preco ?? lead.investimento ?? '', 'inputmode="decimal"')}
-      ${select('🏠 Telhado', 'doc-telhado', p.telhado || ({ ceramica: 'colonial' }[lead.telhado] || lead.telhado) || 'fibrocimento', [['fibrocimento', 'Fibrocimento'], ['colonial', 'Colonial (cerâmica)'], ['metalico', 'Metálico / zipado'], ['laje', 'Laje'], ['solo', 'Solo']])}
+      ${select('🏠 Telhado', 'doc-telhado', telhadoDoLead(lead) || 'pendente', [['pendente', 'A confirmar na visita'], ['fibrocimento', 'Fibrocimento'], ['colonial', 'Colonial (cerâmica)'], ['metalico', 'Metálico / zipado'], ['laje', 'Laje'], ['solo', 'Solo']])}
       ${select('🔌 Ligação', 'doc-ligacao', p.ligacao || lead.ligacao || 'bifasico', [['monofasico', 'Monofásico'], ['bifasico', 'Bifásico'], ['trifasico', 'Trifásico']])}
     </div>
     <div id="doc-resumo" style="margin:10px 0;padding:10px;border-radius:8px;background:#0b1220;border:1px solid #1e293b;font-size:13px;line-height:1.6"></div>

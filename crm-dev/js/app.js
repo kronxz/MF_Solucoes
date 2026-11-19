@@ -16,10 +16,10 @@ import { LEADS_LIMIT } from './crm-config.js';
 // Módulos CRM Dev
 import { iniciarNotepad, atualizarDashboardCompleto } from './crm-dashboard.js';
 import { iniciarRealtimeEventos, pararRealtimeEventos } from './crm-events.js';
-import { iniciarKanban, renderizarKanban, exportarBackup } from './crm-kanban.js';
+import { iniciarKanban, renderizarKanban, exportarBackup } from './crm-kanban.js?v=20261119';
 import { iniciarLixeira, atualizarLeadsLixeira } from './crm-trash.js';
 import { iniciarArquivados, atualizarLeadsArquivados } from './crm-arquivados.js';
-import { iniciarDetails, atualizarLeadsDetails, abrirDetalhes } from './crm-details.js';
+import { iniciarDetails, atualizarLeadsDetails, abrirDetalhes } from './crm-details.js?v=20261119';
 import { renderizarStatsKits, renderizarGraficoLeads } from './crm-stats.js';
 import { iniciarAnalytics, renderizarAnalytics } from './crm-analytics.js';
 import { renderizarVisitas } from './crm-visitas.js';
