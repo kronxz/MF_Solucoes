@@ -1,5 +1,11 @@
 # 📋 Changelog - CRM MF Soluções
 
+## 2026-11-19 — telhado, capa nova, tarja e botão de homologação (PUBLICADO)
+- **Telhado:** a cotação respeita o tipo de telhado do lead (`crm-dev/js/crm-telhado.mjs`); sem dado confirmado aparece "A confirmar na visita". Teste: `crm-dev/js/crm-telhado.test.mjs`.
+- **Capa da proposta:** capa nova minimalista com tarja azul no rodapé da capa (`crm-dev/proposta.html` e `renderer/proposta-offline.html`, imagens em `proposta-img/`).
+- **Botão "🏗️ Iniciar homologação"** no lead (`crm-vendas.js`, campo `homologacaoSolicitada`) — o lead aparece no topo da tela 🏠 Nova Homologação do app.
+- Status: publicado. A entrada abaixo ("ainda não publicada") fica como histórico — **Resolvido: publicado em 19/11/2026.**
+
 ## 2026-11-19 — correção do telhado na cotação (ainda não publicada)
 - A cotação agora usa o telhado atual do lead, normaliza aliases como `Cerâmica / colonial`, propaga essa escolha no payload e no documento e não assume fibrocimento quando o dado falta.
 - Alterados `crm-dev/js/crm-telhado.mjs` (normalização/resolução), `crm-dev/js/crm-cotacao-kit.js` (payload), `crm-dev/js/crm-details.js` (sincronização da edição), `crm-dev/js/crm-documentos.js` (prioridade do valor atual) e `crm-dev/cotacao-kit.html` (render/fallback). Criado `crm-dev/js/crm-telhado.test.mjs`.
