@@ -155,7 +155,14 @@ ${lead.homologacao && lead.homologacao.pasta
     ? `<div style="font-size:13px">⏳ Aguardando no app MF Control Center → <b>🏠 Nova Homologação</b> (aparece no topo da lista).</div>
        <button type="button" data-vendas="homolog-cancelar" class="btn-card">Desfazer</button>`
     : `<button type="button" data-vendas="homolog-iniciar" class="btn-card">🏗️ Iniciar homologação</button>
-       <small style="opacity:.7;display:block">O cliente aparece no app (🏠 Nova Homologação) com nome, telefone, endereço e ligação já preenchidos.</small>`}`;
+       <small style="opacity:.7;display:block">O cliente aparece no app (🏠 Nova Homologação) com nome, telefone, endereço e ligação já preenchidos.</small>`}
+
+<h3 style="margin:14px 0 6px;font-size:15px">🔒 Dados para anúncios (Meta)</h3>
+${lead.capiOptOut
+  ? `<div style="font-size:13px">🚫 Este cliente pediu para NÃO ter os dados enviados à Meta.</div>
+     <button type="button" data-vendas="capi-permitir" class="btn-card">Voltar a permitir</button>`
+  : `<button type="button" data-vendas="capi-optout" class="btn-card">🚫 Cliente pediu: não enviar meus dados à Meta</button>
+     <small style="opacity:.7;display:block">Use se o cliente se opuser (LGPD). O CRM para de enviar o telefone criptografado dele para medir os anúncios.</small>`}`;
 }
 
 async function atualizarLead(lead, upd, msg) {
@@ -251,6 +258,12 @@ async function onClickModal(e) {
       await atualizarLead(lead, { homologacaoSolicitada: true, homologacaoSolicitadaEm: new Date().toISOString(), ultima_acao_nome: 'Homologação solicitada' }, 'Pronto! Abra o app → 🏠 Nova Homologação');
     } else if (acao === 'homolog-cancelar') {
       await atualizarLead(lead, { homologacaoSolicitada: false }, 'Pedido de homologação desfeito');
+    } else if (acao === 'capi-optout') {
+      await atualizarLead(lead, { capiOptOut: true, capiOptOutEm: new Date().toISOString() }, 'Pronto — os dados deste cliente não vão mais para a Meta');
+      btn.textContent = '🚫 Marcado: não enviar à Meta'; btn.disabled = true;
+    } else if (acao === 'capi-permitir') {
+      await atualizarLead(lead, { capiOptOut: false }, 'Envio à Meta permitido de novo');
+      btn.textContent = '✅ Envio permitido'; btn.disabled = true;
     } else if (acao === 'futuro') {
       const data = document.getElementById('vendasRetorno').value;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return toast('Escolha a data de retorno', 'error');
