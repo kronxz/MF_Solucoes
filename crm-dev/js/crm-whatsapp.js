@@ -29,7 +29,8 @@ function montarAba(box) {
   const info = el('span', { id: 'waInfo', style: 'font-size:12px;opacity:.8;flex:1' }, '');
   const bPausar = el('button', { type: 'button', 'data-wa': 'pausar', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#334155;color:#e2e8f0' }, '⏸️ Pausar robô');
   const bVoltar = el('button', { type: 'button', 'data-wa': 'retomar', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#334155;color:#e2e8f0' }, '▶️ Devolver ao robô');
-  topo.append(info, bPausar, bVoltar);
+  const bFechar = el('button', { type: 'button', 'data-wa': 'fechar', title: 'A IA do servidor lê a conversa e sugere 3 frases (nada é enviado)', style: 'padding:7px 12px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;width:auto;flex:0 0 auto;background:#7c3aed;color:#fff' }, '🧠 Como fechar');
+  topo.append(info, bFechar, bPausar, bVoltar);
   const lista = el('div', { id: 'waLista', style: 'height:min(52vh,420px);min-height:220px;overflow:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,.25);display:flex;flex-direction:column;gap:6px' });
   const form = el('div', { style: 'display:flex;flex-direction:column;gap:6px;margin-top:8px' });
   const txt = el('textarea', { id: 'waTexto', rows: '3', maxlength: '1500', placeholder: 'Escreva a mensagem para o cliente…', style: 'width:100%;box-sizing:border-box;min-height:72px;max-height:180px;resize:vertical;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e2e8f0;font-size:14px;line-height:1.4;font-family:inherit' });
@@ -39,7 +40,8 @@ function montarAba(box) {
   linha.append(dica, bEnv);
   form.append(txt, linha);
   const aviso = el('small', { style: 'opacity:.55;display:block;margin-top:4px;font-size:11px' }, 'Fotos e áudios aparecem como "📎 mídia" — veja no celular.');
-  box.append(topo, lista, form, aviso);
+  const sug = el('div', { id: 'waSugestoes', style: 'display:none;margin-top:8px;padding:8px;border-radius:10px;background:rgba(124,58,237,.12);font-size:13px' });
+  box.append(topo, sug, lista, form, aviso);
   txt.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); bEnv.click(); } });
 }
 
@@ -84,6 +86,32 @@ export function abrirConversa() {
   }, () => {});
 }
 
+// [20/11] "Como fechar": grava ia_pedidos; o robô no VPS (comoFechar.js) responde no mesmo doc. NÃO envia nada ao cliente.
+async function pedirComoFechar(lead) {
+  const ref = await addDoc(collection(_db, 'ia_pedidos'), { tipo: 'como_fechar', leadId: String(lead.id || '').slice(0, 40), status: 'pendente', criadoEm: new Date().toISOString() });
+  return new Promise((resolve) => {
+    const t = setTimeout(() => { un(); resolve({ status: 'demorando' }); }, 60000);
+    const un = onSnapshot(ref, (s) => {
+      const st = s.exists() && s.data().status;
+      if (st === 'pronto' || st === 'erro') { clearTimeout(t); un(); resolve(s.data()); }
+    }, () => { clearTimeout(t); resolve({ status: 'erro', erro: 'sem permissão de leitura' }); });
+  });
+}
+function mostrarSugestoes(r) {
+  const box = document.getElementById('waSugestoes');
+  if (!box) return;
+  box.textContent = ''; box.style.display = 'block';
+  if (r.status !== 'pronto') { box.append(el('div', {}, r.status === 'demorando' ? '⏳ O robô ainda não respondeu — tente de novo em instantes.' : '❌ ' + (r.erro || 'erro'))); return; }
+  const res = r.resposta || {};
+  if (res.situacao) box.append(el('div', { style: 'opacity:.85;margin-bottom:6px' }, '📍 ' + res.situacao));
+  (res.frases || []).forEach((f, i) => {
+    const b = el('button', { type: 'button', 'data-wa': 'usarFrase', style: 'display:block;width:100%;text-align:left;margin:4px 0;padding:8px 10px;border:1px solid #7c3aed;border-radius:8px;background:#0b1220;color:#e2e8f0;cursor:pointer;font-size:13px;white-space:pre-wrap' }, `${i + 1}) ${f}`);
+    b.dataset.frase = f;
+    box.append(b);
+  });
+  box.append(el('small', { style: 'opacity:.6;font-size:11px' }, 'Toque numa frase para colocar no campo — você revisa e envia.'));
+}
+
 // Pede ao robô para enviar (ou pausar/retomar). Devolve a promessa do resultado.
 export async function pedirEnvio(lead, tipo, texto) {
   const k = chaveDe(lead && lead.telefone);
@@ -106,9 +134,13 @@ async function onClick(e) {
   const lead = _getLead();
   if (!lead) return;
   const acao = b.dataset.wa;
+  if (acao === 'usarFrase') { const txt = document.getElementById('waTexto'); if (txt) { txt.value = b.dataset.frase || ''; txt.focus(); } return; }
   b.disabled = true;
   try {
-    if (acao === 'enviar') {
+    if (acao === 'fechar') {
+      b.textContent = '⏳ pensando…';
+      mostrarSugestoes(await pedirComoFechar(lead));
+    } else if (acao === 'enviar') {
       const txt = document.getElementById('waTexto');
       const t = txt.value.trim();
       if (!t) return;
@@ -123,7 +155,7 @@ async function onClick(e) {
       toast(r.status === 'enviado' ? (acao === 'pausar' ? 'Robô pausado nesta conversa' : 'Conversa devolvida ao robô') : ('❌ ' + (r.erro || 'sem confirmação')), r.status === 'enviado' ? 'success' : 'error');
     }
   } catch (err) { console.error('[CRM-WA]', err); toast('Erro: ' + (err.message || err), 'error'); }
-  finally { b.disabled = false; if (acao === 'enviar') b.textContent = '📤 Enviar'; }
+  finally { b.disabled = false; if (acao === 'enviar') b.textContent = '📤 Enviar'; if (acao === 'fechar') b.textContent = '🧠 Como fechar'; }
 }
 
 export function iniciarWhatsapp(db, getLeadAtual) {

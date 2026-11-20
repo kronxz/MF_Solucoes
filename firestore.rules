@@ -219,6 +219,17 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // [20/11] "Como fechar" pelo CRM: só pedido (o robô no VPS responde via Admin SDK). Nada vai ao cliente.
+    match /ia_pedidos/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['tipo', 'leadId', 'status', 'criadoEm']) &&
+        request.resource.data.tipo == 'como_fechar' &&
+        request.resource.data.status == 'pendente' &&
+        request.resource.data.leadId is string && request.resource.data.leadId.size() <= 40;
+      allow update, delete: if false;
+    }
+
     // ── Todas as outras coleções: acesso zero via cliente ──
     match /{document=**} {
       allow read, write: if false;
