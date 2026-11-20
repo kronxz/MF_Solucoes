@@ -115,6 +115,11 @@ function normalizarLead(dados, colecao) {
 /**
  * Formata a mensagem HTML para o Telegram
  */
+function esc(v, max = 120) {
+  return String(v == null ? "" : v).slice(0, max)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function formatarMensagem(lead, prioridade, colecao, docId) {
   const hora = lead.criadoEm.toLocaleTimeString('pt-BR', {
     hour: '2-digit', minute: '2-digit',
@@ -130,12 +135,12 @@ function formatarMensagem(lead, prioridade, colecao, docId) {
   return (
     `${prioridade.emoji} <b>NOVO LEAD SOLAR — ${prioridade.label}</b>\n` +
     `\n` +
-    `👤 <b>Nome:</b> ${lead.nome}\n` +
-    `📱 <b>Telefone:</b> ${lead.telefone}\n` +
-    `📍 <b>Cidade:</b> ${lead.cidade}\n` +
-    `💡 <b>Conta de Luz:</b> ${lead.conta}\n` +
-    `📣 <b>Origem:</b> ${lead.origem}\n` +
-    `🌡️ <b>Temperatura:</b> ${lead.temperatura}\n` +
+    `👤 <b>Nome:</b> ${esc(lead.nome, 120)}\n` +
+    `📱 <b>Telefone:</b> ${esc(lead.telefone, 30)}\n` +
+    `📍 <b>Cidade:</b> ${esc(lead.cidade, 100)}\n` +
+    `💡 <b>Conta de Luz:</b> ${esc(lead.conta, 100)}\n` +
+    `📣 <b>Origem:</b> ${esc(lead.origem, 100)}\n` +
+    `🌡️ <b>Temperatura:</b> ${esc(lead.temperatura, 50)}\n` +
     `⚡ <b>Prioridade:</b> ${prioridade.emoji} ${prioridade.label}\n` +
     `📌 <b>Fonte:</b> ${fonte}\n` +
     `🕐 <b>Recebido:</b> ${data} às ${hora}\n` +
@@ -233,7 +238,7 @@ async function processarNovoLead(snap, context, colecao) {
     console.error(`[TelegramAlert] ❌ Falha no envio principal: ${erro.message}`);
 
     // Fallback: mensagem simplificada sem HTML
-    const fallback = `⚠️ NOVO LEAD — ${lead.nome} | ${lead.telefone}\nFonte: ${colecao} | Erro no formato original`;
+    const fallback = `⚠️ NOVO LEAD — ${lead.nome} | ${esc(lead.telefone, 30)}\nFonte: ${colecao} | Erro no formato original`;
     try {
       const result = await enviarTelegram(token, chatId, fallback);
       console.log(`[TelegramAlert] ✅ Fallback enviado — message_id: ${result.message_id}`);

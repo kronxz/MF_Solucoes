@@ -11,7 +11,8 @@ service cloud.firestore {
       // estiver defasado, a conta do Marcos ainda entra; estranho logado continua barrado.
       return request.auth != null && (
         request.auth.uid == 'gddlz2h2xrgcPvJyHMVYzdhfgCr2' ||
-        request.auth.token.email == 'marcos_felipe_eng@hotmail.com'
+        (request.auth.token.email == 'marcos_felipe_eng@hotmail.com' &&
+         request.auth.token.email_verified == true)
       );
     }
     // Endurecimento 2026-08-13 (auditoria de segurança): as coleções internas do CRM
@@ -96,7 +97,16 @@ service cloud.firestore {
         request.resource.data.nome.size()     <= 120 &&
         request.resource.data.telefone.size() >= 8  &&
         request.resource.data.telefone.size() <= 20 &&
+        request.resource.data.telefone.matches('^[0-9+() .-]{8,20}$') &&
         request.resource.data.keys().size()   <= 30 &&
+        (!('valorConta' in request.resource.data) || (request.resource.data.valorConta is string && request.resource.data.valorConta.size() <= 2000)) &&
+        (!('utm_source' in request.resource.data) || (request.resource.data.utm_source is string && request.resource.data.utm_source.size() <= 2000)) &&
+        (!('utm_medium' in request.resource.data) || (request.resource.data.utm_medium is string && request.resource.data.utm_medium.size() <= 2000)) &&
+        (!('utm_campaign' in request.resource.data) || (request.resource.data.utm_campaign is string && request.resource.data.utm_campaign.size() <= 2000)) &&
+        (!('utm_content' in request.resource.data) || (request.resource.data.utm_content is string && request.resource.data.utm_content.size() <= 2000)) &&
+        (!('utm_term' in request.resource.data) || (request.resource.data.utm_term is string && request.resource.data.utm_term.size() <= 2000)) &&
+        (!('referrer' in request.resource.data) || (request.resource.data.referrer is string && request.resource.data.referrer.size() <= 2000)) &&
+        (!('landingPage' in request.resource.data) || (request.resource.data.landingPage is string && request.resource.data.landingPage.size() <= 2000)) &&
         request.resource.data.status is string &&
         request.resource.data.status == 'novo' &&
         (
